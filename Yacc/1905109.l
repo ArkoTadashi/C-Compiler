@@ -13,15 +13,20 @@ using namespace std;
 
 extern YYSTYPE yylval;
 extern SymbolTable *table;
+extern int err_count;
+extern ofstream logout;
+extern ofstream errout;
+
+int line_count;
 
 
-int line_count = 1;
-int err_count = 0;
+void printError(int line_cnt, string errMsg, string symbol) {
+	errout << "Error at line# "<< line_cnt << ": " << errMsg << " " << symbol << endl;
+}
 
-
-FILE *logout;
-FILE *tokenout;
-
+void printLog(int line_cnt, string logMsg, string symbol) {
+	logout << "Line# " << line_cnt << ": Token <" << logMsg << "> Lexeme " << symbol << " found" << endl;
+}
 
 
 %}
@@ -82,7 +87,7 @@ INVALID ({FLOAT}{ID})
 {WHITESPACE} {}
 
 {SLASHCOMMENT} {
-    fprintf(logout,"Line# %d: Token <SINGLE LINE COMMENT> Lexeme %s found\n",line_count,yytext);
+	printLog(line_count, "SINGLE LINE COMMENT", yytext);
 	for (int i = 0; yytext[i] != '\0'; i++) {
 		if (yytext[i] == '\n') {
 			line_count++;
@@ -91,7 +96,7 @@ INVALID ({FLOAT}{ID})
 }
 
 {STARCOMMENT} {
-    fprintf(logout,"Line# %d: Token <MULTI LINE COMMENT> Lexeme %s found\n",line_count,yytext);
+    printLog(line_count, "MULTI LINE COMMENT", yytext);
 	for (int i = 0; yytext[i] != '\0'; i++) {
 		if (yytext[i] == '\n') {
 			line_count++;
@@ -105,7 +110,7 @@ INVALID ({FLOAT}{ID})
 			line_count++;
 		}
 	}
-    fprintf(logout,"Error at line# %d: UNFINISHED_COMMENT %s\n",line_count,yytext);
+    printError(line_count, "UNFINISHED COMMENT", yytext);
 	err_count++;
 }
 
@@ -125,17 +130,17 @@ INVALID ({FLOAT}{ID})
 }
 
 {ILLEGAL} {
-	fprintf(logout,"Error at line# %d: ILLFORMED_NUMBER %s\n",line_count,yytext);
+	printError(line_count, "ILLFORMED NUMBER", yytext);
 	err_count++;
 }
 
 {TOOMANYPOINT} {
-	fprintf(logout,"Error at line# %d: TOO_MANY_DECIMAL_POINTS %s\n",line_count,yytext);
+	printError(line_count, "TOO MANY DECIMAL POINTS", yytext);
 	err_count++;
 }
 
 {EMPTYCHAR} {
-	fprintf(logout,"Error at line# %d: EMPTY_CONST_CHAR %s\n",line_count,yytext);
+	printError(line_count, "EMPTY_CONST_CHAR", yytext);
 	err_count++;
 }
 
@@ -196,12 +201,12 @@ INVALID ({FLOAT}{ID})
 }
 
 {MULTICHAR} {
-	fprintf(logout,"Error at line# %d: MULTICHAR_CONST_CHAR %s\n",line_count,yytext);
+	printError(line_count, "MULTICHAR_CONST_CHAR", yytext);
 	err_count++;
 }
 
 {UNFINISHEDCHAR} {
-	fprintf(logout,"Error at line# %d: UNFINISHED_CONST_CHAR %s\n",line_count,yytext);
+	printError(line_count, "UNFINISHED_CONST_CHAR", yytext);
 	err_count++;
 }
 
@@ -278,12 +283,12 @@ INVALID ({FLOAT}{ID})
 		}
 	}
 	if (multi) {
-		fprintf(tokenout,"<MULTI LINE STRING, %s>\n", yytext);
-		fprintf(logout,"Line# %d: Token <MULTI LINE STRING> Lexeme %s found\n",linee,text);
+		//fprintf(tokenout,"<MULTI LINE STRING, %s>\n", yytext);
+		printLog(linee, "MULTI LINE STRING", yytext);
 	}
     else {
-		fprintf(tokenout,"<SINGLE LINE STRING, %s>\n", yytext);
-		fprintf(logout,"Line# %d: Token <SINGLE LINE STRING> Lexeme %s found\n",linee,text);
+		//fprintf(tokenout,"<SINGLE LINE STRING, %s>\n", yytext);
+		printLog(linee, "SINGLE LINE STRING", yytext);
 	}
 }
 
@@ -293,7 +298,7 @@ INVALID ({FLOAT}{ID})
 			line_count++;
 		}
 	}
-    fprintf(logout,"Error at line# %d: UNFINISHED_STRING %s\n",line_count,yytext);
+    printError(line_count, "UNFINISHED STRING", yytext);
 	err_count++;
 }
 
@@ -377,13 +382,13 @@ INVALID ({FLOAT}{ID})
 }
 
 {INVALID} {
-	fprintf(logout,"Error at line# %d: INVALID_ID_SUFFIX_NUM_PREFIX %s\n",line_count,yytext);
+	printError(line_count, "INVALID_ID_SUFFIX_NUM_PREFIX", yytext);
 	err_count++;
 }
 
 
 {UNRECOGNISEDCHAR} {
-	fprintf(logout,"Error at line# %d: UNRECOGNIZED_CHAR %s\n",line_count,yytext);
+	printError(line_count, "UNRECOGNISED CHAR", yytext);
 	err_count++;
 }
 
@@ -391,28 +396,3 @@ INVALID ({FLOAT}{ID})
 			
 
 %%
-
-int main(int argc, char** argv) {
-	if (argc != 2){
-		printf("Please provide input file name and try again\n");
-		return 0;
-	}
-	
-	FILE *fin=fopen(argv[1],"r");
-	if (fin == NULL){
-		printf("Cannot open specified file\n");
-		return 0;
-	}
-	
-	logout = fopen("1905109_log.txt","w");
-	tokenout = fopen("1905109_token.txt","w");
-
-	yyin = fin;
-	yylex();
-	st.printAll(logout);
-    fprintf(logout, "Total lines: %d\nTotal errors: %d", line_count, err_count);
-	fclose(yyin);
-	fclose(tokenout);
-	fclose(logout);
-	return 0;
-}

@@ -10,9 +10,15 @@ using namespace std;
 
 int yyparse(void);
 int yylex(void);
-extern FILE *yyin;
 
-SymbolTable *table;
+extern FILE *yyin;
+extern int line_count;
+
+ofstream logout;
+ofstream errout;
+int err_count = 0;
+
+SymbolTable table = new SymbolTable(109);
 
 
 void yyerror(char *s)
@@ -152,27 +158,20 @@ arguments : arguments COMMA logic_expression
 %%
 int main(int argc,char *argv[]) {
 
-	if((fp=fopen(argv[1],"r")) == NULL)
-	{
+	FILE* fp;
+	if((fp = freopen(argv[1], "r", stdin)) == NULL) {
 		printf("Cannot Open Input File.\n");
 		exit(1);
 	}
 
-	fp2= fopen(argv[2],"w");
-	fclose(fp2);
-	fp3= fopen(argv[3],"w");
-	fclose(fp3);
+	logout.open("log.txt");
+	errout.open("error.txt");
 	
-	fp2= fopen(argv[2],"a");
-	fp3= fopen(argv[3],"a");
-	
-
-	yyin=fp;
+	yyin = fp;
+	line_count = 1;
 	yyparse();
 	
-
-	fclose(fp2);
-	fclose(fp3);
+	fclose(yyin);
 	
 	return 0;
 }
