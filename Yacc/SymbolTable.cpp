@@ -70,6 +70,15 @@ public:
         this->array = "";
         this->parameters.clear();
     }
+    SymbolInfo(string name, string type, string dataType, int infoType = VARIABLE, string array = "") {
+        this->name = name;
+        this->type = type;
+        this->next = nullptr;
+        this->dataType = dataType;
+        this->infoType = infoType;
+        this->array = array;
+        this->parameters.clear();
+    }
 
     void setName(string name) {
         this->name = name;

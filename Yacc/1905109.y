@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include <cmath>
 #include "SymbolTable.cpp"
 #define YYSTYPE SymbolInfo*
@@ -20,13 +21,36 @@ int err_count = 0;
 
 SymbolTable table = new SymbolTable(109);
 
-void printLog(int line_cnt, string logMsg, string code) {
-	logout << "Line# " << line_cnt << ": " << logMsg << "\t" << code << endl;
+void printLog(int line_cnt, string logMsg, string out) {
+	logout << "Line# " << line_cnt << ": " << logMsg << "\t" << out << endl;
 }
 void yyerror(char *s)
 {
 	//write your code
 }
+
+void symbolListStr(vector<SymbolInfo*>* symbolList) {
+	string out = "";
+	for (SymbolInfo* symbol: *symbolList) {
+		out += symbol->getName() + ",";
+	}
+	if (code.size() > 0) {
+		out = out.substr(0, out.size()-1);
+	}
+}
+
+void delSymbolList(vector<SymbolInfo*>* symbolList) {
+	for (SymbolInfo* symbol: *list) {
+		delete symbol;
+	}
+	delete list;
+}
+
+void functionCall(SymbolInfo* &symbol, vector<SymbolInfo*>* args = NULL) {
+
+}
+
+
 
 
 %}
@@ -138,34 +162,114 @@ rel_expression	: simple_expression
 simple_expression : term 
 		  | simple_expression ADDOP term 
 		  ;
-					
-term :	unary_expression
-     |  term MULOP unary_expression
-     ;
+	// I DON"T KNOW START FROM HERE				
+term :	unary_expression {
+		string out = $1->getName();
+		printLog(line_count, "term : unary_expression", out);
+	}
+    |  term MULOP unary_expression {
+		string out = $1->getName() + $2->getName()  + $3->getName();
+		printLog(line_count, "term : term MULOP unary_expression", out);
+		checkVoidFunction($1, $3);
+		if($2->getName() == "%"){
+			if($3->getName() == "0") logError("Modulus by Zero");
+			// Type Checking: Both the operands of the modulus operator should be integers.
+			if($1->getDataType() != "int" || $3->getDataType() != "int"){
+				logError("Non-Integer operand on modulus operator");
+			}
+			$1->setDataType("int");
+			$3->setDataType("int");
+		}
+		$$ = new SymbolInfo(code, "term", autoTypeCasting($1,$3));
+		delete $1; delete $2; delete $3;
+	}
+    ;
 
-unary_expression : ADDOP unary_expression  
-		 | NOT unary_expression 
-		 | factor 
-		 ;
-	
-factor	: variable 
-	| ID LPAREN argument_list RPAREN
-	| LPAREN expression RPAREN
-	| CONST_INT 
-	| CONST_FLOAT
-	| variable INCOP 
-	| variable DECOP
+unary_expression : ADDOP unary_expression {
+		string out = $1->getName() + $2->getName();
+		printLog(line_count, "unary_expression : ADDOP unary_expression", out);
+		$$ = new SymbolInfo(out, "unary_expression", $2->getDataType());
+		delete $1;
+		delete $2;
+	}
+	| NOT unary_expression {
+		string out = "!" + $2->getName();
+		printLog(line_count, "unary_expression : NOT unary_expression", out);
+		$$ = new SymbolInfo(out, "unary_expression", $2->getDataType());
+		delete $2;
+	}
+	| factor {
+		string out = $1->getName();
+		printLog(line_count, "unary_expression : factor", out);
+	} 
 	;
 	
-argument_list : arguments
-			  |
-			  ;
+factor	: variable {
+		string out = $1->getName();
+		printLog(line_count, "factor : variable", out);
+		$$ = $1;
+	}
+	| ID LPAREN argument_list RPAREN {
+		string out = $1->getName() + "(" + symbolListStr($3) + ")";
+		printLog(line_count, "factor : ID LPAREN argument_list RPAREN", out);
+		functionCall($1, $3);
+		$$ = new SymbolInfo(out, "function", $1->getReturnType());
+		delete $1;
+		delSymbolList($3);
+	}
+	| LPAREN expression RPAREN {
+		string out = "(" + $2->getName() + ")";
+		printLog(line_count, "factor : LPAREN expression RPAREN", out);
+		$$ = new SymbolInfo(out, "factor", $2->getDataType());
+		delete $2;
+	}
+	| CONST_INT {
+		string out = $1->getName();
+		printLog(line_count, "factor : CONST_INT", out);
+		$$ = new SymbolInfo(out, $1->getType(), "int");
+	}
+	| CONST_FLOAT {
+		string out = $1->getName();
+		printLog(line_count, "factor : CONST_FLOAT", out);
+		$$ = new SymbolInfo(out, "factor", "int");
+	}
+	| variable INCOP {
+		string out = $1->getName() + "++";
+		printLog(line_count, "factor : variable INCOP", out);
+		$$ = new SymbolInfo(out, "factor", $1->getDataType());
+		delete $1;
+	}
+	| variable DECOP {
+		string out = $1->getName() + "--";
+		printLog(line_count, "factor : variable DECOP", out);
+		$$ = new SymbolInfo(out, "factor", $1->getDataType());
+		delete $1;
+	}
+	;
+	
+argument_list : arguments {
+		string out = symbolInfoList($1);
+		printLog(line_count, "argument_list : arguments", out);
+		$$ = $1;
+	}
+	| {
+		printLog(line_count, "argument_list :", "");
+		$$ = new vector<SymbolInfo*>();
+	}
+			;
 	
 arguments : arguments COMMA logic_expression {
-
-}
-	      | logic_expression
-	      ;
+		string out = symbolInfoList($1) + "," + $3->getName();
+		printLog(line_count, "arguments : arguments COMMA logic_expression", out);
+		$$->push_back($3);
+	}
+	| logic_expression {
+		string out - $1->getName();
+		printLog(line_count, "arguments : logic_expression", out);
+		$$ = new vector<SymbolInfo*>();
+		$$->push_back($1);
+	}
+	    ;
  
 
 %%
