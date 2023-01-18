@@ -1,4 +1,4 @@
-%option noyywrap
+%option noyywrap yylineno
 
 %{
 #include <iostream>
@@ -7,7 +7,7 @@
 #include <string>
 #include <cstring>
 
-#include "y.tab.h"
+#include "y.tab.hpp"
 
 using namespace std;
 

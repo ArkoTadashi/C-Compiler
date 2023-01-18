@@ -1,10 +1,13 @@
 
 #include <iostream>
+#include <fstream>
 #include <cstdlib>
 #include <cstring>
 #include <string>
 #include <vector>
 #include <cmath>
+
+extern ofstream logout;
 
 using namespace std;
 
@@ -226,8 +229,8 @@ public:
         }
         return true;
     }
-    void print(FILE* logout) {
-        fprintf(logout,"\tScopeTable# %d\n",number);
+    void print() {
+        logout << "\tScopeTable# " << number << endl;
         SymbolInfo* temp = table;
         for (int i = 0; i < bucket; i++) {
             temp = table+i;
@@ -237,9 +240,9 @@ public:
 			fprintf(logout, "\t%d--> ", i+1);
             while(temp->getNext() != NULL) {
                 temp = temp->getNext();
-				fprintf(logout, "<%s,%s> ", temp->getName().c_str(), temp->getType().c_str());
+				logout << "<" << temp->getName() <<  "," << temp->getType()<< "> ";
             }
-            fprintf(logout, "\n");
+            logout << endl;
 			
         }
     }
@@ -313,13 +316,13 @@ public:
         return tempScope->look_up(symbol, true);
         return NULL;
     }
-    void printCurr(FILE* logout) {
-        currentScope->print(logout);
+    void printCurr() {
+        currentScope->print();
     }
-    void printAll(FILE* logout) {
+    void printAll() {
         ScopeTable* tempScope = currentScope;
         while (tempScope != NULL) {
-            tempScope->print(logout);
+            tempScope->print();
             tempScope = tempScope->getParent();
         }
     }

@@ -20,7 +20,9 @@ int err_count = 0;
 
 SymbolTable table = new SymbolTable(109);
 
-
+void printLog(int line_cnt, string logMsg, string code) {
+	logout << "Line# " << line_cnt << ": " << logMsg << "\t" << code << endl;
+}
 void yyerror(char *s)
 {
 	//write your code
@@ -29,13 +31,22 @@ void yyerror(char *s)
 
 %}
 
-%token<SymbolInfo> IF ELSE FOR DO INT FLOAT VOID SWITCH DEFAULT WHILE BREAK CHAR DOUBLE RETURN CASE CONTINUE INCOP ADDOP MULOP RELOP LOGICOP ASSIGNOP BITOP NOT LPAREN RPAREN LCURL RCURL LTHIRD RTHIRD COMMA SEMICOLON 
-%type<SymbolInfo> start program
+%union{
+	SymbolInfo* symbolInfo;
+	string str;
+	vector<SymbolInfo*>* symbolInfoList;
+}
 
-%left 
-%right
+%token IF ELSE FOR DO INT FLOAT VOID SWITCH DEFAULT WHILE BREAK CHAR DOUBLE RETURN CASE CONTINUE INCOP ASSIGNOP BITOP NOT LPAREN RPAREN LCURL RCURL LTHIRD RTHIRD COMMA SEMICOLON STRING
+%token<symbolInfo> ADDOP MULOP RELOP LOGICOP CONST_INT CONST_FLOAT CONST_CHAR ID
 
-%nonassoc 
+%type<symbolInfo> factor variable term unary_expression rel_expression logic_expression simple_expression expression
+%type<str> type_specifier var_declaration func_declaration func_definition unit program expression_statement statement statements compound_statement
+%type<symbolInfoList> arguments argument_list declaration_list parameter_list
+
+
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELSE
 
 
 %%
@@ -112,7 +123,7 @@ variable : ID
 	 | ID LTHIRD expression RTHIRD 
 	 ;
 	 
- expression : logic_expression	
+expression : logic_expression	
 	   | variable ASSIGNOP logic_expression 	
 	   ;
 			
@@ -150,7 +161,9 @@ argument_list : arguments
 			  |
 			  ;
 	
-arguments : arguments COMMA logic_expression
+arguments : arguments COMMA logic_expression {
+
+}
 	      | logic_expression
 	      ;
  
