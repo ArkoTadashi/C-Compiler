@@ -38,6 +38,9 @@ void symbolListStr(vector<SymbolInfo*>* symbolList) {
 		out = out.substr(0, out.size()-1);
 	}
 }
+void varDeclarationListStr(vector<SymbolInfo*>* list) {
+
+}
 
 void delSymbolList(vector<SymbolInfo*>* symbolList) {
 	for (SymbolInfo* symbol: *list) {
@@ -46,8 +49,36 @@ void delSymbolList(vector<SymbolInfo*>* symbolList) {
 	delete list;
 }
 
+
 void functionCall(SymbolInfo* &symbol, vector<SymbolInfo*>* args = NULL) {
 
+}
+
+void voidFunction(SymbolInfo* symbol1, SymbolInfo* symbol2) {
+	
+}
+
+void decFuncParam(int line_cnt, string dataType, string name) {
+	if (dataType == "void") {
+		//
+		return;
+	}
+	if (table.insert(name, "ID")) {
+		SymbolInfo* symbol = table.lookup(name);
+		symbol->setDataType(dataType);
+		return;
+	}
+	//
+}
+
+void decFuncParamList(int line_cnt, vector<SymbolInfo*>* &list) {
+	if (list == NULL) {
+		return;
+	}
+	for (SymbolInfo* symbol: *list) {
+		decFuncParam(line_cnt, symbol->getDataType(), symbol->getName());
+	}
+	list = NULL;
 }
 
 
@@ -75,94 +106,318 @@ void functionCall(SymbolInfo* &symbol, vector<SymbolInfo*>* args = NULL) {
 
 %%
 
-start : program
-	{
-		//write your code in this block in all the similar blocks below
+start : program {
+		
 	}
 	;
 
-program : program unit 
-	| unit
+program : program unit {
+
+	}
+	| unit {
+
+	}
 	;
 	
-unit : var_declaration
-     | func_declaration
-     | func_definition
-     ;
+unit : var_declaration {
+
+	}
+    | func_declaration {
+
+	}
+    | func_definition {
+
+	}
+    ;
      
-func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON
-		| type_specifier ID LPAREN RPAREN SEMICOLON
-		;
+func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON {
+
+	}
+	| type_specifier ID LPAREN RPAREN SEMICOLON {
+
+	}
+	;
 		 
-func_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement
-		| type_specifier ID LPAREN RPAREN compound_statement
- 		;				
+func_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement {
+
+	}
+	| type_specifier ID LPAREN RPAREN compound_statement {
+
+	}
+ 	;				
 
 
-parameter_list  : parameter_list COMMA type_specifier ID
-		| parameter_list COMMA type_specifier
- 		| type_specifier ID
-		| type_specifier
- 		;
+parameter_list  : parameter_list COMMA type_specifier ID {
 
- 		
-compound_statement : LCURL statements RCURL
- 		    | LCURL RCURL
- 		    ;
+	}
+	| parameter_list COMMA type_specifier {
+
+	}
+ 	| type_specifier ID {
+
+	}
+	| type_specifier {
+
+	}
+ 	;
+
+
+//START FROM HERE BHJKSDHUKASDH
+compound_statement : LCURL {table.newScope(); decFuncParamList(paramDeclineNo, funcParamList);} statements RCURL {
+		string code = "{\n"+*$3+"\n}\n";
+		logRule("compound_statement : LCURL statements RCURL",code);
+		$$ = new string(code);
+		delete $3;
+		table.printAllScopeTables();table.exitScope();
+	}
+ 	| LCURL {table.newScope();} RCURL {
+		logRule("compound_statement : LCURL RCURL","{}");
+		$$ = new string("{}");
+		table.printAllScopeTables();table.exitScope();
+	}
+ 	;
  		    
-var_declaration : type_specifier declaration_list SEMICOLON
- 		 ;
+var_declaration : type_specifier declaration_list SEMICOLON {
+		string out = *$1 +" " +  varDeclarationListStr($2) + ";";
+		printLog(line_count, "var_declaration : type_specifier declaration_list SEMICOLON", out);
+		$$ = new string(out);
+		for(SymbolInfo* symbol : *$2){
+			if (*$1 == "void") {
+				//
+				continue;
+			}
+			bool inserted = table.insert(symbol->getName(), symbol->getType());
+			if (!inserted) {
+				//
+			}
+			else {
+				SymbolInfo* variable = table.lookup(symbol->getName());
+				variable->setDataType(*$1);
+				if (symbol->isArray()) { 
+					variable->setArraySize(symbol->getArraySize());
+				}
+			}
+		}
+		delete $1; 
+		delSymbolList($2);
+	}
+ 	;
  		 
-type_specifier	: INT
- 		| FLOAT
- 		| VOID
- 		;
+type_specifier : INT {
+		printLog(line_count, "type_specifier : INT", "int");
+		$$ = new string("int");
+	}
+ 	| FLOAT {
+		printLog(line_count, "type_specifier : FLOAT", "float");
+		$$ = new string("float");
+	}
+ 	| VOID {
+		printLog(line_count, "type_specifier : VOID", "void");
+		$$ = new string("void");
+	}
+ 	;
  		
-declaration_list : declaration_list COMMA ID
- 		  | declaration_list COMMA ID LTHIRD CONST_INT RTHIRD
- 		  | ID
- 		  | ID LTHIRD CONST_INT RTHIRD
- 		  ;
+declaration_list : declaration_list COMMA ID {
+		string out = varDeclarationListStr($1) + "," + $3->getName();
+		$1->push_back($3);
+		printLog(line_count, "declaration_list : declaration_list COMMA ID", out);
+		$$ = $1;
+	}
+ 	| declaration_list COMMA ID LTHIRD CONST_INT RTHIRD {
+		string out = varDeclarationListStr($1) + "," + $3->getName() + "[" + $5->getName() + "]";
+		$3->setArray($5->getName());
+		$1->push_back($3);
+		printLog(line_count, "declaration_list : declaration_list COMMA ID LTHIRD CONST_INT RTHIRD", out);
+		$$ = $1;
+		delete $5;
+	}
+ 	| ID {
+		string out = $1->getName();
+		printLog(line_count, "declaration_list : ID", out);
+		$$ = new vector<SymbolInfo*>();
+		$$->push_back($1);
+	}
+ 	| ID LTHIRD CONST_INT RTHIRD {
+		string out = $1->getName() + "[" + $3->getName() + "]";
+		printLog(line_count, "declaration_list : ID LTHIRD CONST_INT RTHIRD", out);
+		$$ = new vector<SymbolInfo*>();
+		$1->setArraySize($3->getName());
+		$$->push_back($1);
+		delete $3;
+	}
+ 	;
  		  
-statements : statement
-	   | statements statement
-	   ;
+statements : statement {
+		printLog(line_count, "statements : statement", *$1);
+		$$ = $1;
+	}
+	| statements statement {
+		string out = *$1 + "\n" + *$2;
+		printLog(line_count, "statements : statements statement", out);
+		$$ = new string(out);
+		delete $1, $2;
+	}
+	;
 	   
-statement : var_declaration
-	  | expression_statement
-	  | compound_statement
-	  | FOR LPAREN expression_statement expression_statement expression RPAREN statement
-	  | IF LPAREN expression RPAREN statement
-	  | IF LPAREN expression RPAREN statement ELSE statement
-	  | WHILE LPAREN expression RPAREN statement
-	  | PRINTLN LPAREN ID RPAREN SEMICOLON
-	  | RETURN expression SEMICOLON
-	  ;
+statement : var_declaration {
+		printLog(line_count, "statement : var_declaration", *$1);
+	}
+	| expression_statement {
+		printLog(line_count, "statement : expression_statement", *$1);
+	}
+	| compound_statement {
+		printLog(line_count, "statement : compound_statement", *$1);
+	}
+	| FOR LPAREN expression_statement expression_statement expression RPAREN statement {
+		string out = "for(" + *$3 + ";" + *$4 + ";" + $5->getName() + ")" + *$7;
+		printLog(line_count, "statement : FOR LPAREN expression_statement expression_statement expression RPAREN statement", out);
+		$$ = new string(out);
+		delete $3, $4, $5, $7;
+	}
+	| IF LPAREN expression RPAREN statement %prec LOWER_THAN_ELSE {
+		string out = "if(" + $3->getName() + ")" + *$5;
+		printLog(line_count, "statement : IF LPAREN expression RPAREN statement", out);
+		$$ = new string(out);
+		delete $3, $5;
+	}
+	| IF LPAREN expression RPAREN statement ELSE statement {
+		string out = "if(" + $3->getName() + ")" + *$5 + "else " + *$7;
+		printLog(line_count, "statement : IF LPAREN expression RPAREN statement ELSE statement", out);
+		$$ = new string(out);
+		delete $3, $5, $7;
+	}
+	| WHILE LPAREN expression RPAREN statement {
+		string out = "while(" + $3->getName() + ")" + *$5;
+		printLog(line_count, "statement : WHILE LPAREN expression RPAREN statement", out);
+		$$ = new string(out);
+		delete $3, $5;
+	}
+	| PRINTLN LPAREN ID RPAREN SEMICOLON {
+		string out = "printf(" + $3->getName() + ");";
+		printLog(line_count, "statement : PRINTLN LPAREN ID RPAREN SEMICOLON", out);
+		if (!table.lookup($3->getName())) {
+			//
+		}
+		$$ = new string(out);
+		delete $3;
+	}
+	| RETURN expression SEMICOLON {
+		string out = "return " + $2->getName() + ";";
+		printLog(line_count, "statement : RETURN expression SEMICOLON", out);
+		$$ = new string(out);
+		delete $2;
+	}
+	;
 	  
-expression_statement 	: SEMICOLON			
-			| expression SEMICOLON 
-			;
+expression_statement : SEMICOLON {
+		logRule("expression_statement : SEMICOLON",";");
+		$$ = new string(";");
+	}		
+	| expression SEMICOLON {
+		string out = $1->getName() + ";";
+		printLog(line_count, "expression_statement : expression SEMICOLON", out);
+		$$ = new string(out);
+		delete $1;
+	}
+	;
 	  
-variable : ID 		
-	 | ID LTHIRD expression RTHIRD 
-	 ;
+variable : ID {
+		string out = $1->getName();
+		printLog(line_count, "variable : ID", out);
+		SymbolInfo *info = table.lookup(out);
+		if (info != NULL) {
+			if(info->isArray()){
+				//
+			}
+			$$ = new SymbolInfo(*info);
+			delete $1;
+		}
+		else {
+			//
+			$$ = $1;
+		}
+	}
+	| ID LTHIRD expression RTHIRD {
+		string out = $1->getName() + "[" + $3->getName() + "]";
+		printLog(line_count, "variable : ID LTHIRD expression RTHIRD", out);
+		SymbolInfo *info = table.lookup($1->getName());
+		if (info != NULL) {
+			$1->setDataType(info->getDataType());
+			if (!info->isArray()) {
+				//
+			}
+			if ($3->getDataType() != "int") {
+				//
+			}
+		}
+		else {
+			//
+		}
+		$1->setName(out);
+		$$ = $1;
+		delete $3;
+	}
+	;
 	 
-expression : logic_expression	
-	   | variable ASSIGNOP logic_expression 	
-	   ;
+expression : logic_expression {
+		string out = $1->getName();
+		printLog(line_count, "expression : logic_expression", out);
+		$$ = $1;
+	}
+	| variable ASSIGNOP logic_expression {
+		string out = $1->getName() + "=" + $3->getName();
+		printLog(line_count, "expression : variable ASSIGNOP logic_expression", out);
+		SymbolInfo *info = table.lookup($1->getName());
+		if(info != NULL){
+			if(info->getDataType() == "int" && $3->getDataType() == "float"){
+				//
+			}
+		}
+		if($3->getDataType()=="void"){
+			//
+		}
+		$$ = new SymbolInfo(out, "expression", $1->getType());
+		delete $1, $3;
+	}
+	;
 			
-logic_expression : rel_expression 	
-		 | rel_expression LOGICOP rel_expression 	
-		 ;
+logic_expression : rel_expression {
+		string out = $1->getName();
+		printLog(line_count, "logic_expression : rel_expression", out);
+	}
+	| rel_expression LOGICOP rel_expression {
+		string out = $1->getName() + $2->getName() + $3->getName();
+		printLog(line_count, "logic_expression : rel_expression LOGICOP rel_expression", out);
+		$$ = new SymbolInfo(out, "logic_expression", "int");
+		delete $1, $2, $3;
+	}
+	;
 			
-rel_expression	: simple_expression 
-		| simple_expression RELOP simple_expression	
-		;
+rel_expression	: simple_expression {
+		string out = $1->getName();
+		printLog(line_count, "rel_expression : simple_expression", out);
+	}
+	| simple_expression RELOP simple_expression	{
+		string out = $1->getName() + $2->getName() + $3->getName();
+		logRule(line_count, "rel_expression : simple_expression RELOP simple_expression", out);
+		autoTypeCasting($1, $3);
+		$$ = new SymbolInfo(out, "rel_expression", "int");
+		delete $1, $2, $3;
+	}
+	;
 				
-simple_expression : term 
-		  | simple_expression ADDOP term 
-		  ;
-	// I DON"T KNOW START FROM HERE				
+simple_expression : term {
+		string out = $1->getName();
+		printLog(line_count, "simple_expression : term", out);
+	}
+	| simple_expression ADDOP term {
+		string out = $1->getName() + $2->getName() + $3->getName();
+		printLog(line_count, "simple_expression : simple_expression ADDOP term", out);
+		voidFunction($1, $3);
+		$$ = new SymbolInfo(out, "simple_expression", autoTypeCasting($1, $3));
+		delete $1, $2, $3;
+	}
+	;			
 term :	unary_expression {
 		string out = $1->getName();
 		printLog(line_count, "term : unary_expression", out);
@@ -170,18 +425,19 @@ term :	unary_expression {
     |  term MULOP unary_expression {
 		string out = $1->getName() + $2->getName()  + $3->getName();
 		printLog(line_count, "term : term MULOP unary_expression", out);
-		checkVoidFunction($1, $3);
+		voidFunction($1, $3);
 		if($2->getName() == "%"){
-			if($3->getName() == "0") logError("Modulus by Zero");
-			// Type Checking: Both the operands of the modulus operator should be integers.
+			if($3->getName() == "0") {
+				//
+			}
 			if($1->getDataType() != "int" || $3->getDataType() != "int"){
-				logError("Non-Integer operand on modulus operator");
+				//
 			}
 			$1->setDataType("int");
 			$3->setDataType("int");
 		}
-		$$ = new SymbolInfo(code, "term", autoTypeCasting($1,$3));
-		delete $1; delete $2; delete $3;
+		$$ = new SymbolInfo(code, "term", autoTypeCasting($1, $3));
+		delete $1, $2, $3;
 	}
     ;
 
