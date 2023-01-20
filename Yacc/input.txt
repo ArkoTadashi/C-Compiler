@@ -1,0 +1,8 @@
+int pp;
+
+int x;
+
+int main() {
+    int y;
+    y = 5;
+}

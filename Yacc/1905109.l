@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <string>
 #include <cstring>
+#include "SymbolTable.cpp"
 
 #include "y.tab.hpp"
 
@@ -14,6 +15,7 @@ using namespace std;
 extern YYSTYPE yylval;
 extern SymbolTable *table;
 extern int err_count;
+
 extern ofstream logout;
 extern ofstream errout;
 
@@ -67,7 +69,8 @@ EMPTYCHAR ''
 UNRECOGNISEDCHAR ('("\\"[^{SPECIAL}]?)'|{NONEWLINE})
 
 
-INCOP ("++"|"--")
+INCOP ("++")
+DECOP ("--")
 ADDOP ("+"|"-")
 MULOP ("*"|"/"|"%")
 RELOP ("<"|"<="|">"|">="|"=="|"!=")
@@ -119,13 +122,18 @@ INVALID ({FLOAT}{ID})
 
 {DIGITS} {
     SymbolInfo* s = new SymbolInfo(yytext, "CONST_INT");
-    yylval.SymbolInfo = s;
+	cout << 566 << endl;
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
     return CONST_INT;
 }
 
 {FLOAT} {
     SymbolInfo* s = new SymbolInfo(yytext, "CONST_FLOAT");
-    yylval.SymbolInfo = s;
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
     return CONST_FLOAT;
 }
 
@@ -196,7 +204,9 @@ INVALID ({FLOAT}{ID})
 		}
     }
 	SymbolInfo* s = new SymbolInfo(yytext, "CONST_CHAR");
-    yylval.SymbolInfo = s;
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
     return CONST_CHAR;
 }
 
@@ -303,79 +313,239 @@ INVALID ({FLOAT}{ID})
 }
 
 
-"if"        { return IF;        }	
-"else"      { return ELSE;      }
-"for"       { return FOR;       }
-"do"        { return DO;        }
-"int"       { return INT;       }
-"float"     { return FLOAT      }
-"void"      { return VOID;      }
-"switch"    { return SWITCH;    }
-"default"   { return DEFAULT;   }
-"while"     { return WHILE;     }
-"break"     { return BREAK;     }
-"char"      { return CHAR;      }
-"double"    { return DOUBLE;    }
-"return"    { return RETURN;    }
-"case"      { return CASE;      }
-"continue"  { return CONTINUE;  }
+"if"        { 
+	SymbolInfo* s = new SymbolInfo(yytext, "IF");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return IF;        
+	}	
+"else"      { 
+	SymbolInfo* s = new SymbolInfo(yytext, "ELSE");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return ELSE;      
+	}
+"for"       { 
+	SymbolInfo* s = new SymbolInfo(yytext, "FOR");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return FOR;       
+	}
+"do"        { 
+	SymbolInfo* s = new SymbolInfo(yytext, "DO");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return DO;        
+	}
+"int"       { 
+	SymbolInfo* s = new SymbolInfo(yytext, "INT");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
+	return INT;       
+	}
+"float"     { 
+	SymbolInfo* s = new SymbolInfo(yytext, "FLOAT");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return FLOAT;     
+	}
+"void"      { 
+	SymbolInfo* s = new SymbolInfo(yytext, "VOID");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return VOID;      
+	}
+"switch"    { 
+	SymbolInfo* s = new SymbolInfo(yytext, "SWITCH");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return SWITCH;    
+	}
+"default"   { 
+	SymbolInfo* s = new SymbolInfo(yytext, "DEFAULT");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return DEFAULT;   
+	}
+"while"     { 
+	SymbolInfo* s = new SymbolInfo(yytext, "WHILE");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return WHILE;     
+	}
+"break"     { 
+	SymbolInfo* s = new SymbolInfo(yytext, "BREAK");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return BREAK;     
+	}
+"char"      { 
+	SymbolInfo* s = new SymbolInfo(yytext, "CHAR");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return CHAR;      
+	}
+"double"    { 
+	SymbolInfo* s = new SymbolInfo(yytext, "DOUBLE");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return DOUBLE;    
+	}
+"return"    { 
+	SymbolInfo* s = new SymbolInfo(yytext, "RETURN");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return RETURN;    
+	}
+"case"      { 
+	SymbolInfo* s = new SymbolInfo(yytext, "CASE");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return CASE;      
+	}
+"continue"  { 
+	SymbolInfo* s = new SymbolInfo(yytext, "CONTINUE");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return CONTINUE;  
+	}
+"printf"	{ 
+	SymbolInfo* s = new SymbolInfo(yytext, "PRINTLN");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return PRINTLN;	
+	}
 
 {INCOP} {
 	SymbolInfo* s = new SymbolInfo(yytext, "INCOP");
-    yylval.SymbolInfo = s;
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
     return INCOP;
+}
+
+{DECOP} {
+	SymbolInfo* s = new SymbolInfo(yytext, "DECOP");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
+    return DECOP;
 }
 
 {ADDOP} {
 	SymbolInfo* s = new SymbolInfo(yytext, "ADDOP");
-    yylval.SymbolInfo = s;
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
     return ADDOP;
 }
 
 {MULOP} {
 	SymbolInfo* s = new SymbolInfo(yytext, "MULOP");
-    yylval.SymbolInfo = s;
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
     return MULOP;
 }
 
 {RELOP} {
 	SymbolInfo* s = new SymbolInfo(yytext, "RELOP");
-    yylval.SymbolInfo = s;
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
     return RELOP;
 }
 
-"=" { return ASSIGNOP; }
+"=" { 
+	SymbolInfo* s = new SymbolInfo(yytext, "ASSIGNOP");
+	cout << 77 << endl;
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return ASSIGNOP; 
+	}
 
 {LOGICOP} {
     SymbolInfo* s = new SymbolInfo(yytext, "LOGICOP");
-    yylval.SymbolInfo = s;
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
     return LOGICOP;
 }
 
 {BITOP}	{
 	SymbolInfo* s = new SymbolInfo(yytext, "BITOP");
-    yylval.SymbolInfo = s;
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
     return BITOP;
 }
 
-"!" { return NOT;       }
-"(" { return LPAREN;    }
-")" { return RPAREN;    }
-"{" { return LCURL;     }	
-"}" { return RCURL;     }
-"[" { return LTHIRD;    }
-"]" { return RTHIRD;    }
-"," { return COMMA;     }
-";" { return SEMICOLON; }
+"!" { 
+	SymbolInfo* s = new SymbolInfo(yytext, "NOT");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return NOT;       
+	}
+"(" { 
+	SymbolInfo* s = new SymbolInfo(yytext, "LPAREN");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return LPAREN;    
+	}
+")" { 
+	SymbolInfo* s = new SymbolInfo(yytext, "RPAREN");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return RPAREN;    
+	}
+"{" { 
+	SymbolInfo* s = new SymbolInfo(yytext, "LCURL");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return LCURL;     
+	}	
+"}" { 
+	SymbolInfo* s = new SymbolInfo(yytext, "RCURL");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return RCURL;     
+	}
+"[" { 
+	SymbolInfo* s = new SymbolInfo(yytext, "LTHIRD");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return LTHIRD;    
+	}
+"]" { 
+	SymbolInfo* s = new SymbolInfo(yytext, "RTHIRD");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return RTHIRD;    
+	}
+"," { 
+	SymbolInfo* s = new SymbolInfo(yytext, "COMMA");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return COMMA;     
+	}
+";" { 
+	SymbolInfo* s = new SymbolInfo(yytext, "SEMICOLON");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	return SEMICOLON; 
+	}
 
 
 
 {ID} {
-    SymbolInfo* s = table->look_up(yytext);
-    if (s == NULL) {
-        s = new SymbolInfo(yytext, "ID");
-    }
-    yylval.SymbolInfo = s;
+	
+    SymbolInfo* s = new SymbolInfo(yytext, "ID");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+    yylval.symbolInfo = s;
+
+	
 
     return ID;
 	

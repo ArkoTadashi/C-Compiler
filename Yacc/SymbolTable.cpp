@@ -11,20 +11,6 @@
 using namespace std;
 
 
-long long SDBMHash(string str, int bucket) {
-	long long hash = 0;
-	int i = 0;
-	int len = str.length();
-
-	for (i = 0; i < len; i++) {
-		hash = ((str[i]%bucket) + ((hash << 6)%bucket) + ((hash << 16)%bucket) - hash) % bucket;
-	}
-
-	return hash%bucket;
-}
-
-
-
 class SymbolInfo {
 
 private:
@@ -33,10 +19,13 @@ private:
     SymbolInfo* prev;
     SymbolInfo* next;
 
+    int startLine;
+    int endLine;
     string dataType;
     int infoType;
-    string array;
+    int arraySize;
     vector<pair<string, string>> parameters;
+    vector<SymbolInfo*>* childList;
 
 
 public:
@@ -46,8 +35,17 @@ public:
     static const int FUNCTION_DEFINITION = 3;
 
     SymbolInfo() {
+        this->name = "";
+        this->type = "";
+        this->dataType = "";
         prev = NULL;
         next = NULL;
+        this->infoType = VARIABLE;
+        this->arraySize = -1;
+        this->parameters.clear();
+        this->startLine = 0;
+        this->endLine = 0;
+        childList = new vector<SymbolInfo*>();
     }
     SymbolInfo(SymbolInfo* symbol) {
         this->name = symbol->name;
@@ -55,28 +53,37 @@ public:
         this->dataType = symbol->dataType;
         this->prev = symbol->prev;
         this->next = symbol->next;
-        this->array = symbol->array;
+        this->arraySize = symbol->arraySize;
         this->infoType = symbol->infoType;
         this->parameters = symbol->parameters;
+        this->startLine = 0;
+        this->endLine = 0;
+        childList = new vector<SymbolInfo*>();
     }
-    SymbolInfo(string name, string type) {
+    SymbolInfo(string name, string type = "") {
         this->name = name;
         this->type = type;
         this->dataType = "";
         prev = NULL;
         next = NULL;
         this->infoType = VARIABLE;
-        this->array = "";
+        this->arraySize = -1;
         this->parameters.clear();
+        this->startLine = 0;
+        this->endLine = 0;
+        childList = new vector<SymbolInfo*>();
     }
-    SymbolInfo(string name, string type, string dataType, int infoType = VARIABLE, string array = "") {
+    SymbolInfo(string name, string type, string dataType, int infoType = VARIABLE, int arraySize = -1) {
         this->name = name;
         this->type = type;
         this->next = nullptr;
         this->dataType = dataType;
         this->infoType = infoType;
-        this->array = array;
+        this->arraySize = arraySize;
+        this->startLine = 0;
+        this->endLine = 0;
         this->parameters.clear();
+        childList = new vector<SymbolInfo*>();
     }
 
     void setName(string name) {
@@ -104,7 +111,25 @@ public:
         return next;
     }
 
+    void setStartLine(int line) {
+        this->startLine = line;
+    }
+    int getStartLine() {
+        return startLine;
+    }
+    void setEndLine(int line) {
+        this->endLine = line;
+    }
+    int getEndLine() {
+        return endLine;
+    }
 
+    void addChild(SymbolInfo* child) {
+        childList->push_back(child);
+    }
+    vector<SymbolInfo*>* getChildList() {
+        return childList;
+    }
 
     void setReturnType(string dataType) {
         this->dataType = dataType;
@@ -130,15 +155,15 @@ public:
     }
 
     bool isArray() {
-        return (array != "");
+        return (arraySize != -1);
     }
 
-    void setArray(string array) {
-        this->array = array;
+    void setArraySize(int arraySize) {
+        this->arraySize = arraySize;
     }
 
-    string getArray() {
-        return array;
+    int getArraySize() {
+        return arraySize;
     }
 
     bool isFunction() {
@@ -157,11 +182,22 @@ public:
         return parameters;
     }
 
-    friend ostream &operator<<(ostream &os, const SymbolInfo &obj)
-    {
-        os << "< " << obj.name << " : " << obj.type << ">";
-        return os;
+    void printChild(int depth, ofstream& parseout){
+    for(int i = 0; i < depth; i++) {
+        parseout << " ";
     }
+    if(childList->size() == 0) {
+        parseout << name << "\t" << "<Line: " << startLine << ">\n";
+    }
+    else {
+        parseout << name << "\t" << "<Line: " << startLine << "-" << endLine << ">\n";
+        
+        for(SymbolInfo *symbol : *childList){
+                symbol->printChild(depth+1, parseout);
+        }
+    }
+}
+
 };
 
 
@@ -171,6 +207,18 @@ private:
     ScopeTable* parent_scope;
     int number;
     int bucket;
+
+    long long SDBMHash(string str, int bucket) {
+        long long hash = 0;
+        int i = 0;
+        int len = str.length();
+
+        for (i = 0; i < len; i++) {
+            hash = ((str[i]%bucket) + ((hash << 6)%bucket) + ((hash << 16)%bucket) - hash) % bucket;
+        }
+
+        return hash%bucket;
+    }
 
 public:
     ScopeTable(ScopeTable* parent_scope = NULL, int number = 0, int bucket = 1) {
@@ -243,20 +291,20 @@ public:
         }
         return true;
     }
-    void print() {
-        cout << "\tScopeTable# " << number << endl;
+    void print(ofstream& logout) {
+        logout << "\tScopeTable# " << number << endl;
         SymbolInfo* temp = table;
         for (int i = 0; i < bucket; i++) {
             temp = table+i;
             if (temp->getNext() == NULL) {
                 continue;
             }
-			fprintf(logout, "\t%d--> ", i+1);
+			logout << "\t" << i+1 << "--> ";
             while(temp->getNext() != NULL) {
                 temp = temp->getNext();
-				cout << "<" << temp->getName() <<  "," << temp->getType()<< "> ";
+				logout << "<" << temp->getName() <<  "," << temp->getType()<< "> ";
             }
-            cout << endl;
+            logout << endl;
 			
         }
     }
@@ -277,6 +325,18 @@ private:
     ScopeTable* currentScope;
     int bucket;
     int num;
+
+    long long SDBMHash(string str, int bucket) {
+        long long hash = 0;
+        int i = 0;
+        int len = str.length();
+
+        for (i = 0; i < len; i++) {
+            hash = ((str[i]%bucket) + ((hash << 6)%bucket) + ((hash << 16)%bucket) - hash) % bucket;
+        }
+
+        return hash%bucket;
+    }
 
 public:
     SymbolTable(int bucket = 1) {
@@ -330,13 +390,13 @@ public:
         return tempScope->look_up(symbol, true);
         return NULL;
     }
-    void printCurr() {
-        currentScope->print();
+    void printCurr(ofstream& logout) {
+        currentScope->print(logout);
     }
-    void printAll() {
+    void printAll(ofstream& logout) {
         ScopeTable* tempScope = currentScope;
         while (tempScope != NULL) {
-            tempScope->print();
+            tempScope->print(logout);
             tempScope = tempScope->getParent();
         }
     }
