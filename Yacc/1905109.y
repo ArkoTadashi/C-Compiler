@@ -24,7 +24,7 @@ SymbolTable table = SymbolTable(109);
 int err_count = 0;
 
 vector<SymbolInfo*>* funcParamList = NULL;
-int paramDecline_cnt;
+int paramDecLine;
 
 void yyerror(const char* s) {
 	cout<<"Error at line "<<line_count<<": "<<s<<"\n"<<endl;
@@ -43,7 +43,7 @@ void printErr(string s, int line_cnt = -1) {
 }
 
 void printLog(string rule, string out) {
-	cout<<"Line "<<line_count<<": "<<rule<<endl<<endl<<out<<endl<<endl;
+	logout<<"Line "<<line_count<<": "<<rule<<endl<<endl<<out<<endl<<endl;
 }
 
 string symbolListStr(vector<SymbolInfo*>* list) {
@@ -114,359 +114,332 @@ void decFuncParamList(vector<SymbolInfo*>* &list, int line_cnt = line_count) {
 	list = NULL;
 }
 
-void declareFunction(string funcName, string returnType, vector<SymbolInfo*>* parameterList = NULL, int line_cnt = line_count) {
+void decFunc(string funcName, string returnType, vector<SymbolInfo*>* parameterList = NULL, int line_cnt = line_count) {
 	bool inserted = table.insert(funcName, "ID");
 	SymbolInfo* symbol = table.look_up(funcName);
 	
-	if(inserted){
-		info->setInfoType(SymbolInfo::FUNCTION_DECLARATION);
-		info->setReturnType(returnType);
-		// add functions params to the symbol info
-		if(parameterList != NULL)
-			for(SymbolInfo* param: *parameterList){
-				info->addParameter(param->getDataType(), param->getName());
+	if(inserted) {
+		symbol->setInfoType(SymbolInfo::FUNCTION_DECLARATION);
+		symbol->setReturnType(returnType);
+		if(parameterList != NULL) {
+			for(SymbolInfo* param: *parameterList) {
+				symbol->addParameter(param->getDataType(), param->getName());
 			}
-		
-		//debug("Function \""+funcName+"\" declared");
-		//debug("Total params: "+to_string(info->getParameters().size()));
-	}else{
-		if(info->getInfoType()==SymbolInfo::FUNCTION_DECLARATION){
+		}
+	}
+	else {
+		if(symbol->getInfoType() == SymbolInfo::FUNCTION_DECLARATION) {
 			printErr("redeclaration of "+funcName, line_cnt);
 			return;
 		}
 	}
 }
 
-void defineFunction(string funcName, string returnType, int line_cnt=line_count, vector<SymbolInfo*>* parameterList=NULL){
-	// get the symbol info to add return type and params
-	SymbolInfo* info = table.look_up(funcName);
-
-	// if the function is not declared
-	// then insert it in the symbol table as ID 
-	if(info==NULL){ // function name not found in the symbol table
+void defFunc(string funcName, string returnType, int line_cnt=line_count, vector<SymbolInfo*>* parameterList=NULL) {
+	SymbolInfo* symbol = table.look_up(funcName);
+	if(symbol == NULL) {
 		table.insert(funcName, "ID");
-		info = table.look_up(funcName);
-	}else{
-			// function already declared previously
-		if(info->getInfoType() == SymbolInfo::FUNCTION_DECLARATION){
-			if(info->getReturnType()!=returnType){
+		symbol = table.look_up(funcName);
+	}
+	else {
+		if(symbol->getInfoType() == SymbolInfo::FUNCTION_DECLARATION) {
+			if(symbol->getReturnType() != returnType) {
 				printErr("Return type mismatch with function declaration in function "+funcName, line_cnt);
 				return;
 			}
 			vector<pair<string, string> > params = info->getParameters();
 			int paramCnt = parameterList == NULL ? 0 : parameterList->size();
-			if(params.size() != paramCnt){
-				printErr("Number of arguments doesn't match prototype of the function "+funcName, line_cnt);
+			if(params.size() != paramCnt) {
+				printErr("Number of arguments doesn't match prototype of the function " + funcName, line_cnt);
 				return;
 			}
-			if(parameterList != NULL){ // for non-void functions
+			if(parameterList != NULL) {
 				vector<SymbolInfo*> paramList = *parameterList;
-				for(int i=0; i<params.size(); i++){
-					if(params[i].first != paramList[i]->getDataType()){
-						printErr("conflicting argument types for "+funcName, line_cnt);
+				for(int i = 0; i < params.size(); i++){
+					if(params[i].first != paramList[i]->getDataType()) {
+						printErr("conflicting argument types for " + funcName, line_cnt);
 						return;
 					}
 				}
 			}
-		}else{ // non-function type declared with same name
-			printErr(" Multiple declaration of "+funcName);
+		}
+		else {
+			printErr(" Multiple declaration of " + funcName);
 			return;
 		}
 	}
-	if(info->getInfoType() == SymbolInfo::FUNCTION_DEFINITION){
-		printErr("redefinition of "+funcName, line_cnt);
+	if(symbol->getInfoType() == SymbolInfo::FUNCTION_DEFINITION) {
+		printErr("redefinition of " + funcName, line_cnt);
 		return;
 	}
-	info->setInfoType(SymbolInfo::FUNCTION_DEFINITION);
-	info->setReturnType(returnType);
-	info->setParameters(vector<pair<string, string> >());
-	// add functions params to the symbol info
-	if(parameterList != NULL) // for non void functions
+	symbol->setInfoType(SymbolInfo::FUNCTION_DEFINITION);
+	symbol->setReturnType(returnType);
+	symbol->setParameters(vector<pair<string, string> >());
+	if(parameterList != NULL) {
 		for(SymbolInfo* param: *parameterList){
-			info->addParameter(param->getDataType(), param->getName());
+			symbol->addParameter(param->getDataType(), param->getName());
 		}
+	}
 }
 
-void callFunction(SymbolInfo* &funcSym, vector<SymbolInfo*>* args = NULL){
+void callFunction(SymbolInfo* &funcSym, vector<SymbolInfo*>* args = NULL) {
 	string funcName = funcSym->getName();
-	SymbolInfo* info = table.look_up(funcName);
-	if(info == NULL){
-		printErr("Undeclared Function "+funcName);
+	SymbolInfo* symbol = table.look_up(funcName);
+	if(symbol == NULL) {
+		printErr("Undeclared Function " + funcName);
 		return;
 	}
-	if(!info->isFunction()){ // a function call cannot be made with non-function type identifier.
-		printErr(funcName+" is not a function");
+	if(!symbol->isFunction()) {
+		printErr(funcName + " is not a function");
 		return;
 	}
-	funcSym->setReturnType(info->getReturnType());
-	if(info->getInfoType() != SymbolInfo::FUNCTION_DEFINITION){
-		printErr("Function "+funcName+" not defined");
+	funcSym->setReturnType(symbol->getReturnType());
+	if(symbol->getInfoType() != SymbolInfo::FUNCTION_DEFINITION) {
+		printErr("Function " + funcName+" not defined");
 		return;
 	}
-	vector<pair<string, string> > params = info->getParameters();
+	vector<pair<string, string> > params = symbol->getParameters();
 	int paramCnt = args == NULL ? 0 : args->size();
-	// Check whether a function is called with appropriate number of parameters
-	if(params.size() != paramCnt){
-		printErr("Total number of arguments mismatch in function "+funcName);
+	if(params.size() != paramCnt) {
+		printErr("Total number of arguments mismatch in function " + funcName);
 		return;
 	}
-	if(args != NULL){ // for non-void functions
+	if(args != NULL) {
 		vector<SymbolInfo*> argList = *args;
-		// Type Checking: During a function call all the arguments should be consistent with the function definition.
-		for(int i=0; i<params.size(); i++){
-			// Check whether a function is called with appropriate types. 
-			if(params[i].first != argList[i]->getDataType()){
-				printErr(to_string(i+1)+"th argument mismatch in function "+funcName);
+		for(int i = 0; i < params.size(); i++) {
+			if(params[i].first != argList[i]->getDataType()) {
+				printErr(to_string(i+1) + "th argument mismatch in function " + funcName);
 				return;
 			}
 		}
 	}
 }
 
-string autoTypeCasting(SymbolInfo* x, SymbolInfo* y){
-	if(x->getDataType() == y->getDataType())
-		return x->getDataType();
-	if(x->getDataType() == "int" && y->getDataType() == "float"){
-		x->setDataType("float");
-		return "float";
-	}else if(x->getDataType() == "float" && y->getDataType() == "int"){
-		y->setDataType("float");
+string autoTypeCast(SymbolInfo* symbol1, SymbolInfo* symbol2) {
+	if(symbol1->getDataType() == symbol2->getDataType()) {
+		return symbol1->getDataType();
+	}
+
+	if(symbol1->getDataType() == "int" && symbol2->getDataType() == "float") {
+		symbol1->setDataType("float");
 		return "float";
 	}
-	if(x->getDataType()!="void"){
-		return x->getDataType();
+	else if(symbol1->getDataType() == "float" && symbol2->getDataType() == "int") {
+		symbol2->setDataType("float");
+		return "float";
 	}
-	return y->getDataType();
+
+	if(symbol1->getDataType()!="void") {
+		return symbol1->getDataType();
+	}
+	return symbol2->getDataType();
 }
 
-void checkVoidFunction(SymbolInfo* a, SymbolInfo* b){
-	// Type Checking: A void function cannot be called as a part of an expression.
-	if(a->getDataType() == "void" || b->getDataType() == "void"){
+void checkVoidFunc(SymbolInfo* symbol1, SymbolInfo* symbol2) {
+	if(symbol1->getDataType() == "void" || symbol2->getDataType() == "void"){
 		printErr("Void function used in expression");
 	}
 }
 
 %}
-	//// read: https://stackoverflow.com/questions/1853204/yylval-and-union
 %union{
-	SymbolInfo* symbol_info; 
-	string* str_info;
-	vector<SymbolInfo*>* symbol_info_list;
+	SymbolInfo* symbolInfo; 
+	string* str;
+	vector<SymbolInfo*>* symbolInfoList;
 }
 
-	/* TERMINAL SYMBOLS */ 
-	//////////////// keywords ////////////////
-%token IF ELSE FOR WHILE DO BREAK INT CHAR FLOAT DOUBLE VOID RETURN SWITCH CASE DEFAULT CONTINUE PRINTLN
-	//////////////// operators ////////////////
-%token <symbol_info> ADDOP MULOP RELOP LOGICOP
-%token INCOP DECOP ASSIGNOP NOT
-	//////////////// puncuators ////////////////
-%token LPAREN RPAREN LCURL RCURL LTHIRD RTHIRD COMMA SEMICOLON
-	//////////////// identifiers and const ////////////////
-%token <symbol_info> CONST_INT CONST_FLOAT CONST_CHAR ID
-	//////////////// other ////////////////
-%token STRING 
+%token IF ELSE FOR WHILE DO BREAK INT CHAR FLOAT DOUBLE VOID INCOP DECOP ASSIGNOP NOT RETURN LPAREN RPAREN LCURL RCURL LTHIRD RTHIRD COMMA SEMICOLON SWITCH CASE DEFAULT CONTINUE PRINTLN STRING 
+%token <symbolInfo> ADDOP MULOP RELOP LOGICOP CONST_INT CONST_FLOAT CONST_CHAR ID
 
-	/* NON-TERMINAL SYMBOLS */
-%type <symbol_info> variable factor term unary_expression simple_expression rel_expression logic_expression expression
-%type <str_info> expression_statement statement statements compound_statement
-%type <str_info> type_specifier var_declaration func_declaration func_definition unit program 
-%type <symbol_info_list>  declaration_list parameter_list argument_list arguments
+%type <symbolInfo> variable factor term unary_expression simple_expression rel_expression logic_expression expression
+%type <str> expression_statement type_specifier var_declaration func_declaration func_definition unit program statement statements compound_statement 
+%type <symbolInfoList>  declaration_list parameter_list argument_list arguments
 
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
 
 %%
-    /* =================== production rules ================*/
-start : program { // full program parsing is done
+    
+start : program {
 		printLog("start : program", "");
 		table.printAllScopeTables(); table.exitScope();
 		cout << "Total Lines: " << line_count << endl;
 		cout << "Total Errors: " << err_count << endl;
 	}
 	;
-program : program unit { //append newly parsed unit to the end of the program
-		string out = *$1 +"\n"+ *$2;
-		printLog("program : program unit",out);
+program : program unit {
+		string out = *$1 + "\n" + *$2;
+		printLog("program : program unit", out);
 		$$ = new string(out);
-		delete $1;delete $2;
+		delete $1, $2;
 	}
-	| unit { // this is for 1st unit in the program
-		printLog("program : unit",*$1);
+	| unit {
+		printLog("program : unit", *$1);
 		$$ = $1;
 	}
 	;
-// a unit can be variable declaration or function declaration or function definition	
+
 unit : var_declaration {
-		printLog( "unit : var_declaration",*$1); //$$ = $1;
+		printLog( "unit : var_declaration", *$1);
 	}
     | func_declaration {
-		printLog( "unit : func_declaration",*$1); //$$ = $1;
+		printLog( "unit : func_declaration", *$1);
 	}
     | func_definition {
-		printLog( "unit : func_definition",*$1); //$$ = $1;
+		printLog( "unit : func_definition", *$1);
 	}
     ;
+
 func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON {
-		string out = *$1 + " " + $2->getName() + "(" +funcParamListStr($4) + ");";
-		printLog("func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON",out);;
+		string out = *$1 + " " + $2->getName() + "(" + funcParamListStr($4) + ");";
+		printLog("func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON", out);;
 		$$ = new string(out);
-		declareFunction($2->getName(), *$1, $4);
-		//free stuff
-		delete $1; delete $2; delSymbolVec($4);
+		decFunc($2->getName(), *$1, $4);
+		delete $1, $2; 
+		delSymbolVec($4);
 	}
 	| type_specifier ID LPAREN RPAREN SEMICOLON {
-		string out = *$1 +" "+$2->getName()+"();";
-		printLog("func_declaration : type_specifier ID LPAREN RPAREN SEMICOLON",out);
-		declareFunction($2->getName(), *$1);
+		string out = *$1 + " " + $2->getName() + "();";
+		printLog("func_declaration : type_specifier ID LPAREN RPAREN SEMICOLON", out);
+		decFunc($2->getName(), *$1);
 		$$ = new string(out);
-		delete $1; delete $2;
+		delete $1, $2;
 	}
 	;
-func_definition : type_specifier ID LPAREN parameter_list RPAREN {defineFunction($2->getName(), *$1,line_count, $4);} compound_statement {
+func_definition : type_specifier ID LPAREN parameter_list RPAREN {defFunc($2->getName(), *$1,line_count, $4);} compound_statement {
 		string out = *$1 + " " + $2->getName() + "(" +funcParamListStr($4) + ")" + *$7;	
-		printLog( "func_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement",out);;
+		printLog("func_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement", out);
 		$$ = new string(out);
-		//cout<<"freeing for "<<$2->getName()<<endl;
-		//free stuff
-		delete $1; delete $2; delete $7; delSymbolVec($4);
+		delete $1, $7; 
+		delSymbolVec($4);
 	}
-	| type_specifier ID LPAREN RPAREN {defineFunction($2->getName(), *$1,line_count);} compound_statement {
-		string out = *$1 +" "+$2->getName()+"()"+ *$6;
-		printLog( "func_definition : type_specifier ID LPAREN RPAREN compound_statement",out);
+	| type_specifier ID LPAREN RPAREN {defFunc($2->getName(), *$1, line_count);} compound_statement {
+		string out = *$1 + " " + $2->getName() + "()" + *$6;
+		printLog("func_definition : type_specifier ID LPAREN RPAREN compound_statement", out);
 		$$ = new string(out);
-		delete $1;delete $2;delete $6;
+		delete $1, $2, $6;
 	}
 	;				
-//vector<SymbolInfo*>*
-parameter_list  : parameter_list COMMA type_specifier ID { // void fun(int a, in b);
-		string out = funcParamListStr($1);
-		out+= ","+*$3+" "+$4->getName();
-		printLog("parameter_list  : parameter_list COMMA type_specifier ID",out);
-		$1->push_back(new SymbolInfo($4->getName(),"", *$3));
+
+parameter_list : parameter_list COMMA type_specifier ID {
+		string out = funcParamListStr($1) + "," + *$3 + " " + $4->getName();
+		printLog("parameter_list : parameter_list COMMA type_specifier ID", out);
+		$1->push_back(new SymbolInfo($4->getName(), "", *$3));
 		$$ = $1;
-		funcParamList = $1; // save the parameter to store in function scope
-		paramDecline_cnt = line_count;
-		delete $3; delete $4;
+		funcParamList = $1;
+		paramDecLine = line_count;
+		delete $3, $4;
 	}
-	| parameter_list COMMA type_specifier { // void fun(int, float)
-		string out = funcParamListStr($1);
-		out+= "," + *$3;
-		printLog("parameter_list  : parameter_list COMMA type_specifier",out);
+	| parameter_list COMMA type_specifier {
+		string out = funcParamListStr($1) + "," + *$3;
+		printLog("parameter_list : parameter_list COMMA type_specifier", out);
 		$1->push_back(new SymbolInfo(*$3, ""));
 		$$ = $1;
 		funcParamList = $1; 
-		paramDecline_cnt = line_count;
+		paramDecLine = line_count;
 		delete $3;
 	}
-	| type_specifier ID { // void fun(int a)
-		string out = *$1 +" "+$2->getName();
-		printLog("parameter_list  : type_specifier ID",out);
+	| type_specifier ID {
+		string out = *$1 + " " + $2->getName();
+		printLog("parameter_list : type_specifier ID", out);
 		$$ = new vector<SymbolInfo*>();
 		$$->push_back(new SymbolInfo($2->getName(), "", *$1));
 		funcParamList = $$;
-		paramDecline_cnt = line_count;
-		delete $1; delete $2;
+		paramDecLine = line_count;
+		delete $1, $2;
 	}
-	// start of paramter list
-	| type_specifier {// void fun(int);
-		printLog("parameter_list  : type_specifier",*$1);
-		// init parameter list
+	| type_specifier {
+		printLog("parameter_list : type_specifier", *$1);
 		$$ = new vector<SymbolInfo*>();
-		$$->push_back(new SymbolInfo(*$1,"", *$1));
+		$$->push_back(new SymbolInfo(*$1, "", *$1));
 		delete $1;
 	}
 	;
-compound_statement : LCURL {table.enterScope(); decFuncParamList(funcParamList, paramDecline_cnt);} statements RCURL {
-		string out = "{\n"+*$3+"\n}\n";
-		printLog("compound_statement : LCURL statements RCURL",out);
+compound_statement : LCURL {table.newScope(); decFuncParamList(funcParamList, paramDecLine);} statements RCURL {
+		string out = "{\n" + *$3 + "\n}\n";
+		printLog("compound_statement : LCURL statements RCURL", out);
 		$$ = new string(out);
 		delete $3;
-		table.printAllScopeTables();table.exitScope();
+		table.printAllScopeTables();
+		table.exitScope();
 	}
-	| LCURL {table.enterScope();} RCURL {
-		printLog("compound_statement : LCURL RCURL","{}");
+	| LCURL {table.newScope();} RCURL {
+		printLog("compound_statement : LCURL RCURL", "{}");
 		$$ = new string("{}");
-		table.printAllScopeTables();table.exitScope();
+		table.printAllScopeTables();
+		table.exitScope();
 	}
 	;
 
 var_declaration : type_specifier declaration_list SEMICOLON {
 		string out = *$1 +" " +  varDecListStr($2) + ";";
-		printLog("var_declaration : type_specifier declaration_list SEMICOLON",out);
+		printLog("var_declaration : type_specifier declaration_list SEMICOLON", out);
 		$$ = new string(out);
-		// decare variables in the symbol table
-		for(SymbolInfo* info : *$2){
-			if(*$1 == "void"){
+		for(SymbolInfo* symbol : *$2) {
+			if(*$1 == "void") {
 				printErr("Variable type cannot be void");
 				continue;
 			}
-			bool success = table.insert(info->getName(), info->getType());
-			if(!success){
-				printErr("Multiple declaration of "+info->getName());
+			bool inserted = table.insert(symbol->getName(), symbol->getType());
+			if(!inserted) {
+				printErr("Multiple declaration of "+symbol->getName());
 			}else{
-				// get the variable from symbol table
-				SymbolInfo* newVar = table.look_up(info->getName());
-				newVar->setDataType(*$1); // set the data type of the variable
-				if(info->isArray()){ // set array size for array type variables
-					newVar->setArraySize(info->getArray());
+				SymbolInfo* var = table.look_up(symbol->getName());
+				var->setDataType(*$1);
+				if(symbol->isArray()) { 
+					var->setArraySize(symbol->getArray());
 				}
 			}
 		}
-		// free stuff
-		delete $1; delSymbolVec($2);
+		delete $1; 
+		delSymbolVec($2);
 	}
 	;
+
 type_specifier	: INT {
-		printLog("type_specifier : INT","int");
+		printLog("type_specifier : INT", "int");
 		$$ = new string("int");
 	}
 	| FLOAT {
-		printLog("type_specifier : FLOAT","float");
+		printLog("type_specifier : FLOAT", "float");
 		$$ = new string("float");
 	}
 	| VOID {
-		printLog("type_specifier : VOID","void");
+		printLog("type_specifier : VOID", "void");
 		$$ = new string("void");
 	}
 	;
-// vector<SymbolInfo*>*
+
 declaration_list : declaration_list COMMA ID {
-		string out = varDecListStr($1);
-		out+= ","+$3->getName(); // add new variable declaration
-		$1->push_back($3); // add new variable to the list
-		printLog("declaration_list : declaration_list COMMA ID",out);
+		string out = varDecListStr($1) + "," + $3->getName();
+		$1->push_back($3);
+		printLog("declaration_list : declaration_list COMMA ID", out);
 		$$ = $1;
 	}
 	| declaration_list COMMA ID LTHIRD CONST_INT RTHIRD {
-		string out = varDecListStr($1);
-		out+= "," + $3->getName()+"["+$5->getName()+"]";
+		string out = varDecListStr($1) + "," + $3->getName() + "[" + $5->getName() + "]";
 		$3->setArraySize($5->getName());
 		$1->push_back($3);
-		printLog("declaration_list : declaration_list COMMA ID LTHIRD CONST_INT RTHIRD",out);
+		printLog("declaration_list : declaration_list COMMA ID LTHIRD CONST_INT RTHIRD", out);
 		$$ = $1;
-		delete $5; //free stuff
+		delete $5;
 	}
 	| ID {
-		printLog("declaration_list : ID",$1->getName());
-		// create list for the first symbol
+		string out = $1->getName();
+		printLog("declaration_list : ID", out);
 		$$ = new vector<SymbolInfo*>();
 		$$->push_back($1);
 	}
-	// for array declaration
-	// for first declaration
 	| ID LTHIRD CONST_INT RTHIRD {
-		string out = $1->getName()+"["+$3->getName()+"]";
-		printLog("declaration_list : ID LTHIRD CONST_INT RTHIRD",out);
-		// create list for the first symbol
+		string out = $1->getName() + "[" + $3->getName() + "]";
+		printLog("declaration_list : ID LTHIRD CONST_INT RTHIRD", out);
 		$$ = new vector<SymbolInfo*>();
-		// add the first symbol to the param list
 		$1->setArraySize($3->getName());
 		$$->push_back($1);
-
 		delete $3;
 	}
 	;
+	//DOESN"T WORK AT ALL
 statements : statement {
 		printLog( "statements : statement",*$1);
 		$$ = $1;
@@ -615,7 +588,7 @@ rel_expression : simple_expression {
 	| simple_expression RELOP simple_expression	{
 		string out = $1->getName()+$2->getName()+$3->getName();
 		printLog("rel_expression : simple_expression RELOP simple_expression",out);
-		autoTypeCasting($1,$3);
+		autoTypeCast($1,$3);
 		$$ = new SymbolInfo(out,"rel_expression","int");
 		delete $1,$2,$3;
 	}
@@ -629,7 +602,7 @@ simple_expression : term {
 		string out = $1->getName() + $2->getName()  + $3->getName();
 		printLog("simple_expression : simple_expression ADDOP term",out);
 		checkVoidFunction($1, $3);
-		$$ = new SymbolInfo(out, "simple_expression", autoTypeCasting($1, $3));
+		$$ = new SymbolInfo(out, "simple_expression", autoTypeCast($1, $3));
 		delete $1; delete $2; delete $3;
 	} 
 	;
@@ -650,7 +623,7 @@ term :	unary_expression {
 			$1->setDataType("int");
 			$3->setDataType("int");
 		}
-		$$ = new SymbolInfo(out, "term", autoTypeCasting($1,$3));
+		$$ = new SymbolInfo(out, "term", autoTypeCast($1,$3));
 		delete $1; delete $2; delete $3;
 	}
     ;
@@ -750,7 +723,7 @@ int main(int argc,char *argv[]) {
 		exit(1);
 	}
 
-	//logout.open("log.txt");
+	logout.open("log.txt");
 	errout.open("error.txt");
 	
 	yyin = fp;
