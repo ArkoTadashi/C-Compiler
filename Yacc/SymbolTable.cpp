@@ -7,7 +7,6 @@
 #include <vector>
 #include <cmath>
 
-extern ofstream logout;
 
 using namespace std;
 
@@ -157,6 +156,12 @@ public:
     vector<pair<string, string>> getParameters() {
         return parameters;
     }
+
+    friend ostream &operator<<(ostream &os, const SymbolInfo &obj)
+    {
+        os << "< " << obj.name << " : " << obj.type << ">";
+        return os;
+    }
 };
 
 
@@ -239,7 +244,7 @@ public:
         return true;
     }
     void print() {
-        logout << "\tScopeTable# " << number << endl;
+        cout << "\tScopeTable# " << number << endl;
         SymbolInfo* temp = table;
         for (int i = 0; i < bucket; i++) {
             temp = table+i;
@@ -249,9 +254,9 @@ public:
 			fprintf(logout, "\t%d--> ", i+1);
             while(temp->getNext() != NULL) {
                 temp = temp->getNext();
-				logout << "<" << temp->getName() <<  "," << temp->getType()<< "> ";
+				cout << "<" << temp->getName() <<  "," << temp->getType()<< "> ";
             }
-            logout << endl;
+            cout << endl;
 			
         }
     }
