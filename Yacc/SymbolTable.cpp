@@ -24,7 +24,7 @@ private:
     string dataType;
     int infoType;
     int arraySize;
-    vector<pair<string, string>> parameters;
+    vector<SymbolInfo*>* parameters;
     vector<SymbolInfo*>* childList;
 
 
@@ -42,7 +42,7 @@ public:
         next = NULL;
         this->infoType = VARIABLE;
         this->arraySize = -1;
-        this->parameters.clear();
+        this->parameters = new vector<SymbolInfo*>();
         this->startLine = 0;
         this->endLine = 0;
         childList = new vector<SymbolInfo*>();
@@ -60,7 +60,7 @@ public:
         this->endLine = 0;
         childList = new vector<SymbolInfo*>();
     }
-    SymbolInfo(string name, string type = "") {
+    SymbolInfo(string name, string type) {
         this->name = name;
         this->type = type;
         this->dataType = "";
@@ -68,7 +68,7 @@ public:
         next = NULL;
         this->infoType = VARIABLE;
         this->arraySize = -1;
-        this->parameters.clear();
+        this->parameters = new vector<SymbolInfo*>();
         this->startLine = 0;
         this->endLine = 0;
         childList = new vector<SymbolInfo*>();
@@ -82,7 +82,7 @@ public:
         this->arraySize = arraySize;
         this->startLine = 0;
         this->endLine = 0;
-        this->parameters.clear();
+        this->parameters = new vector<SymbolInfo*>();
         childList = new vector<SymbolInfo*>();
     }
 
@@ -170,15 +170,12 @@ public:
         return (infoType == FUNCTION_DECLARATION or infoType == FUNCTION_DEFINITION);
     }
 
-    void addParameter(string dataType, string paramName) {
-        parameters.push_back({dataType, paramName});
+    void setParameters(vector<SymbolInfo*>* parameters) {
+        for (SymbolInfo* param : *parameters) {
+            this->parameters->push_back(param);
+        }
     }
-
-    void setParameters(vector<pair<string, string>> parameters) {
-        this->parameters = parameters;
-    }
-
-    vector<pair<string, string>> getParameters() {
+    vector<SymbolInfo*>* getParameters() {
         return parameters;
     }
 
@@ -187,10 +184,10 @@ public:
         parseout << " ";
     }
     if(childList->size() == 0) {
-        parseout << name << "\t" << "<Line: " << startLine << ">\n";
+        parseout << type << " : " << name << "\t" << "<Line: " << startLine << ">\n";
     }
     else {
-        parseout << name << "\t" << "<Line: " << startLine << "-" << endLine << ">\n";
+        parseout << name << " : " << type << "\t" << "<Line: " << startLine << "-" << endLine << ">\n";
         
         for(SymbolInfo *symbol : *childList){
                 symbol->printChild(depth+1, parseout);

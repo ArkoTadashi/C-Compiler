@@ -1,0 +1,18 @@
+Error at line 17: a is not an array.
+
+Error at line 17: Expression inside third brackets not an integer
+
+Error at line 18: a is not an array.
+
+Error at line 18: Expression inside third brackets not an integer
+
+Error at line 19: a is not an array.
+
+Error at line 19: Expression inside third brackets not an integer
+
+Error at line 19: a is not an array.
+
+Error at line 19: Expression inside third brackets not an integer
+
+Error at line 20: Non-Integer operand on modulus operator
+

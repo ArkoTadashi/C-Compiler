@@ -122,7 +122,6 @@ INVALID ({FLOAT}{ID})
 
 {DIGITS} {
     SymbolInfo* s = new SymbolInfo(yytext, "CONST_INT");
-	cout << 566 << endl;
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
     yylval.symbolInfo = s;
@@ -459,7 +458,6 @@ INVALID ({FLOAT}{ID})
 
 "=" { 
 	SymbolInfo* s = new SymbolInfo(yytext, "ASSIGNOP");
-	cout << 77 << endl;
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
 	return ASSIGNOP; 
