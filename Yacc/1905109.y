@@ -1,11 +1,7 @@
 %{
-#include <iostream>
-#include <cstdlib>
-#include <cstring>
-#include <string>
-#include <cmath>
+#include <bits/stdc++.h>
 #include "SymbolTable.cpp"
-#define YYSTYPE SymbolInfo*
+
 
 using namespace std;
 
@@ -19,6 +15,9 @@ ofstream logout;
 ofstream errout;
 int err_count = 0;
 
+vector<SymbolInfo*>* funcParamList;
+int paramDeclineNo;
+
 SymbolTable table = new SymbolTable(109);
 
 void printLog(int line_cnt, string logMsg, string out) {
@@ -29,7 +28,7 @@ void yyerror(char *s)
 	//write your code
 }
 
-void symbolListStr(vector<SymbolInfo*>* symbolList) {
+string symbolListStr(vector<SymbolInfo*>* symbolList) {
 	string out = "";
 	for (SymbolInfo* symbol: *symbolList) {
 		out += symbol->getName() + ",";
@@ -37,9 +36,11 @@ void symbolListStr(vector<SymbolInfo*>* symbolList) {
 	if (code.size() > 0) {
 		out = out.substr(0, out.size()-1);
 	}
+	return out;
 }
-void varDeclarationListStr(vector<SymbolInfo*>* list) {
-
+string varDeclarationListStr(vector<SymbolInfo*>* list) {
+	string out = "";
+	return out;
 }
 
 void delSymbolList(vector<SymbolInfo*>* symbolList) {
@@ -92,7 +93,7 @@ void decFuncParamList(int line_cnt, vector<SymbolInfo*>* &list) {
 	vector<SymbolInfo*>* symbolInfoList;
 }
 
-%token IF ELSE FOR DO INT FLOAT VOID SWITCH DEFAULT WHILE BREAK CHAR DOUBLE RETURN CASE CONTINUE INCOP ASSIGNOP BITOP NOT LPAREN RPAREN LCURL RCURL LTHIRD RTHIRD COMMA SEMICOLON STRING
+%token IF ELSE FOR DO INT FLOAT VOID SWITCH DEFAULT WHILE BREAK CHAR DOUBLE RETURN CASE CONTINUE INCOP DECOP ASSIGNOP BITOP NOT LPAREN RPAREN LCURL RCURL LTHIRD RTHIRD COMMA SEMICOLON STRING PRINTLN
 %token<symbolInfo> ADDOP MULOP RELOP LOGICOP CONST_INT CONST_FLOAT CONST_CHAR ID
 
 %type<symbolInfo> factor variable term unary_expression rel_expression logic_expression simple_expression expression
@@ -504,7 +505,7 @@ factor	: variable {
 	;
 	
 argument_list : arguments {
-		string out = symbolInfoList($1);
+		string out = symbolInfoListStr($1);
 		printLog(line_count, "argument_list : arguments", out);
 		$$ = $1;
 	}
@@ -515,12 +516,12 @@ argument_list : arguments {
 			;
 	
 arguments : arguments COMMA logic_expression {
-		string out = symbolInfoList($1) + "," + $3->getName();
+		string out = symbolInfoListStr($1) + "," + $3->getName();
 		printLog(line_count, "arguments : arguments COMMA logic_expression", out);
 		$$->push_back($3);
 	}
 	| logic_expression {
-		string out - $1->getName();
+		string out = $1->getName();
 		printLog(line_count, "arguments : logic_expression", out);
 		$$ = new vector<SymbolInfo*>();
 		$$->push_back($1);

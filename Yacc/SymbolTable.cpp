@@ -7,7 +7,10 @@
 #include <vector>
 #include <cmath>
 
-extern ofstream logout;
+
+
+ofstream logout;
+logout.open("blah.txt");
 
 using namespace std;
 
