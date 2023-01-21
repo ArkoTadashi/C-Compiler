@@ -173,6 +173,7 @@ func_declaration : type_specifier ID LPAREN parameter_list RPAREN {
 				$2->setType("FUNCTION");
 				$2->setDataType($1->getType());
 				$2->setParameters(parameterList);
+				parameterList->clear();
 				$2->setInfoType(SymbolInfo::FUNCTION_DECLARATION);
 			} SEMICOLON {
 		printLog("func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON");
@@ -203,8 +204,36 @@ func_declaration : type_specifier ID LPAREN parameter_list RPAREN {
 	}
 	;
 func_definition : type_specifier ID LPAREN parameter_list RPAREN {
-				SymbolInfo* symbol = table->look_up($2->getName());
-				if (symbol != NULL and symbol->getDataType() != "" and symbol->getDataType() != $1->getType()) {
+				if ($2->getInfoType() == SymbolInfo::FUNCTION_DEFINITION) {
+					printErr("Redefinition of Function");
+				}
+				else if ($2->getInfoType() == SymbolInfo::FUNCTION_DECLARATION) {
+					vector<SymbolInfo*>* params = $2->getParameters();
+					if (params->size() < parameterList->size()) {
+						printErr("Too many arguments to function '" + $2->getName() + "'");
+					}
+					else if (params->size() > parameterList->size()) {
+						printErr("Too few arguments to function '" + $2->getName() + "'");
+					}
+					else {
+						for (int i = 0; i < params->size(); i++) {
+							SymbolInfo* symbol1 = (*params)[i];
+							SymbolInfo* symbol2 = (*parameterList)[i];
+							if (symbol1->getType() != symbol2->getType()) {
+								printErr(string("Type mismatch for argument " + i+1) + " of '" + $2->getName() + "'");
+							}
+							else if (i == params->size()-1) {
+								$2->setType("FUNCTION");
+								$2->setDataType($1->getType());
+								$2->setParameters(parameterList);
+								$2->setInfoType(SymbolInfo::FUNCTION_DEFINITION);
+							}
+						} 
+					}
+				}
+				else if ($2->getDataType() != $1->getType()) {
+					cout << $2->getDataType() << endl;
+					cout << $1->getDataType() << endl;
 					printErr("Return type mismatch with the function declaration");
 				}
 				else {
@@ -228,8 +257,10 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN {
 		
 	}
 	| type_specifier ID LPAREN RPAREN {
-				SymbolInfo* symbol = table->look_up($2->getName());
-				if (symbol != NULL and symbol->getDataType() != "" and symbol->getDataType() != $1->getType()) {
+				if ($2->getInfoType() == SymbolInfo::FUNCTION_DEFINITION) {
+					printErr("Redefinition of Function");
+				}
+				else if ($2->getDataType() != $1->getType()) {
 					printErr("Return type mismatch with the function declaration");
 				}
 				else {
@@ -342,7 +373,7 @@ compound_statement : LCURL {
 				for (SymbolInfo* symbol : *parameterList) {
 					bool inserted = table->insert(symbol->getName(), symbol->getType());
 					if(!inserted) {
-						printErr("Redifinition of Parameter");
+						printErr("Redefinition of Parameter");
 						continue;
 					}
 				}
@@ -419,6 +450,7 @@ declaration_list : declaration_list COMMA ID {
         $$->setEndLine($2->getEndLine());
 		declareList->push_back($3);
 		$$->setDataType($1->getDataType());
+		
 	}
 	| declaration_list COMMA ID LTHIRD CONST_INT RTHIRD {
 		printLog("declaration_list : declaration_list COMMA ID LTHIRD CONST_INT RTHIRD");
@@ -807,7 +839,7 @@ factor : variable {
 		$$->addChild($3);
 		$$->addChild($4);
         $$->setEndLine($4->getEndLine());
-		$$->setDataType($1->getDataType());
+		$1->setDataType($$->getDataType());
 	}
 	| LPAREN expression RPAREN {
 		printLog("factor : LPAREN expression RPAREN");
