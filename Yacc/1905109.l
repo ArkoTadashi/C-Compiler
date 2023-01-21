@@ -26,8 +26,8 @@ void printError(int line_cnt, string errMsg, string symbol) {
 	errout << "Error at line# "<< line_cnt << ": " << errMsg << " " << symbol << endl;
 }
 
-void printLog(int line_cnt, string logMsg, string symbol) {
-	logout << "Line# " << line_cnt << ": Token <" << logMsg << "> Lexeme " << symbol << " found" << endl;
+void printLogLex(string logMsg, string symbol) {
+	logout << "Line# " << line_count << ": Token <" << logMsg << "> Lexeme " << symbol << " found" << endl;
 }
 
 
@@ -54,7 +54,7 @@ STARCOMMENT {UNFINISHEDSTARCOMMENT}[\*]*("*/")
 LETTER [a-zA-Z]
 DIGIT [0-9]
 DIGITS {DIGIT}+
-FLOAT {DIGITS}?(\.{DIGITS})?([Ee][+-]?{DIGITS})?
+FLOAT {DIGITS}?((\.)?{DIGITS})([Ee][+-]?{DIGITS})?
 
 TOOMANYPOINT {DIGITS}?(((\.)+({DIGITS})?)*)?([Ee][+-]?{DIGITS})?(((\.)+({DIGITS})?)*)?
 ILLEGAL {DIGITS}?(\.{DIGITS})?([Ee][+-]?{FLOAT})?
@@ -90,7 +90,7 @@ INVALID ({FLOAT}{ID})
 {WHITESPACE} {}
 
 {SLASHCOMMENT} {
-	printLog(line_count, "SINGLE LINE COMMENT", yytext);
+	printLogLex("SINGLE LINE COMMENT", yytext);
 	for (int i = 0; yytext[i] != '\0'; i++) {
 		if (yytext[i] == '\n') {
 			line_count++;
@@ -99,7 +99,7 @@ INVALID ({FLOAT}{ID})
 }
 
 {STARCOMMENT} {
-    printLog(line_count, "MULTI LINE COMMENT", yytext);
+    printLogLex("MULTI LINE COMMENT", yytext);
 	for (int i = 0; yytext[i] != '\0'; i++) {
 		if (yytext[i] == '\n') {
 			line_count++;
@@ -121,6 +121,7 @@ INVALID ({FLOAT}{ID})
 
 
 {DIGITS} {
+	printLogLex("CONST_INT", yytext);
     SymbolInfo* s = new SymbolInfo(yytext, "CONST_INT");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
@@ -129,6 +130,7 @@ INVALID ({FLOAT}{ID})
 }
 
 {FLOAT} {
+	printLogLex("CONST_FLOAT", yytext);
     SymbolInfo* s = new SymbolInfo(yytext, "CONST_FLOAT");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
@@ -202,6 +204,7 @@ INVALID ({FLOAT}{ID})
 			yytext[i] = yytext[i+off];
 		}
     }
+	printLogLex("CONST_CHAR", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "CONST_CHAR");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
@@ -293,11 +296,11 @@ INVALID ({FLOAT}{ID})
 	}
 	if (multi) {
 		//fprintf(tokenout,"<MULTI LINE STRING, %s>\n", yytext);
-		printLog(linee, "MULTI LINE STRING", yytext);
+		printLogLex("MULTI LINE STRING", yytext);
 	}
     else {
 		//fprintf(tokenout,"<SINGLE LINE STRING, %s>\n", yytext);
-		printLog(linee, "SINGLE LINE STRING", yytext);
+		printLogLex("SINGLE LINE STRING", yytext);
 	}
 }
 
@@ -313,30 +316,39 @@ INVALID ({FLOAT}{ID})
 
 
 "if"        { 
+	printLogLex("IF", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "IF");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return IF;        
 	}	
 "else"      { 
+	printLogLex("ELSE", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "ELSE");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return ELSE;      
 	}
 "for"       { 
+	printLogLex("FOR", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "FOR");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return FOR;       
 	}
 "do"        { 
+	printLogLex("DO", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "DO");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return DO;        
 	}
 "int"       { 
+	printLogLex("INT", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "INT");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
@@ -344,79 +356,104 @@ INVALID ({FLOAT}{ID})
 	return INT;       
 	}
 "float"     { 
+	printLogLex("FLOAT", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "FLOAT");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return FLOAT;     
 	}
 "void"      { 
+	printLogLex("VOID", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "VOID");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return VOID;      
 	}
 "switch"    { 
+	printLogLex("SWITCH", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "SWITCH");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return SWITCH;    
 	}
 "default"   { 
+	printLogLex("DEFAULT", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "DEFAULT");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return DEFAULT;   
 	}
 "while"     { 
+	printLogLex("WHILE", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "WHILE");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return WHILE;     
 	}
 "break"     { 
+	printLogLex("BREAK", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "BREAK");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return BREAK;     
 	}
 "char"      { 
+	printLogLex("CHAR", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "CHAR");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return CHAR;      
 	}
 "double"    { 
+	printLogLex("DOUBLE", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "DOUBLE");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return DOUBLE;    
 	}
 "return"    { 
+	printLogLex("RETURN", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "RETURN");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return RETURN;    
 	}
 "case"      { 
+	printLogLex("CASE", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "CASE");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return CASE;      
 	}
 "continue"  { 
+	printLogLex("CONTINUE", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "CONTINUE");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return CONTINUE;  
 	}
 "printf"	{ 
+	printLogLex("PRINTLN", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "PRINTLN");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return PRINTLN;	
 	}
 
 {INCOP} {
+	printLogLex("INCOP", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "INCOP");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
@@ -425,6 +462,7 @@ INVALID ({FLOAT}{ID})
 }
 
 {DECOP} {
+	printLogLex("DECOP", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "DECOP");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
@@ -433,6 +471,7 @@ INVALID ({FLOAT}{ID})
 }
 
 {ADDOP} {
+	printLogLex("ADDOP", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "ADDOP");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
@@ -441,6 +480,7 @@ INVALID ({FLOAT}{ID})
 }
 
 {MULOP} {
+	printLogLex("MULOP", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "MULOP");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
@@ -449,6 +489,7 @@ INVALID ({FLOAT}{ID})
 }
 
 {RELOP} {
+	printLogLex("RELOP", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "RELOP");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
@@ -457,13 +498,16 @@ INVALID ({FLOAT}{ID})
 }
 
 "=" { 
+	printLogLex("ASSIGNOP", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "ASSIGNOP");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return ASSIGNOP; 
 	}
 
 {LOGICOP} {
+	printLogLex("LOGICOP", yytext);
     SymbolInfo* s = new SymbolInfo(yytext, "LOGICOP");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
@@ -472,6 +516,7 @@ INVALID ({FLOAT}{ID})
 }
 
 {BITOP}	{
+	printLogLex("BITOP", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "BITOP");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
@@ -480,64 +525,82 @@ INVALID ({FLOAT}{ID})
 }
 
 "!" { 
+	printLogLex("NOT", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "NOT");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return NOT;       
 	}
 "(" { 
+	printLogLex("LPAREN", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "LPAREN");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return LPAREN;    
 	}
 ")" { 
+	printLogLex("RPAREN", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "RPAREN");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return RPAREN;    
 	}
 "{" { 
+	printLogLex("LCURL", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "LCURL");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return LCURL;     
 	}	
 "}" { 
+	printLogLex("RCURL", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "RCURL");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return RCURL;     
 	}
 "[" { 
+	printLogLex("LTHIRD", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "LTHIRD");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return LTHIRD;    
 	}
 "]" { 
+	printLogLex("RTHIRD", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "RTHIRD");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return RTHIRD;    
 	}
 "," { 
+	printLogLex("COMMA", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "COMMA");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return COMMA;     
 	}
 ";" { 
+	printLogLex("SEMICOLON", yytext);
 	SymbolInfo* s = new SymbolInfo(yytext, "SEMICOLON");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
 	return SEMICOLON; 
 	}
 
 
 
 {ID} {
-	
+	printLogLex("ID", yytext);
     SymbolInfo* s = new SymbolInfo(yytext, "ID");
 	s->setStartLine(line_count);
 	s->setEndLine(line_count);

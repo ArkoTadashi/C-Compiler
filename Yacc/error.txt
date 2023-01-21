@@ -1,18 +1,11 @@
-Error at line 17: a is not an array.
-
-Error at line 17: Expression inside third brackets not an integer
-
-Error at line 18: a is not an array.
-
-Error at line 18: Expression inside third brackets not an integer
-
-Error at line 19: a is not an array.
-
-Error at line 19: Expression inside third brackets not an integer
-
-Error at line 19: a is not an array.
-
-Error at line 19: Expression inside third brackets not an integer
-
-Error at line 20: Non-Integer operand on modulus operator
-
+Line# 8: Redefinition of function parameter
+Line# 8: Redefinition of function parameter
+Line# 21: Redefinition of function parameter
+Line# 42: Variable type cannot be void
+Line# 43: Multiple declaration of variable
+Line# 43: Multiple declaration of variable
+Line# 52: Undeclared variable k
+Line# 53: b is not an array.
+Line# 54: Expression inside third brackets not an integer
+Line# 61: Non-Integer operand on modulus operator
+Line# 68: Undeclared variable h
