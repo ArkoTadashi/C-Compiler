@@ -451,6 +451,22 @@ INVALID ({FLOAT}{ID})
 	yylval.symbolInfo = s;
 	return PRINTLN;	
 	}
+"print"	{ 
+	printLogLex("PRINTLN", yytext);
+	SymbolInfo* s = new SymbolInfo(yytext, "PRINTLN");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
+	return PRINTLN;	
+	}
+"println"	{ 
+	printLogLex("PRINTLN", yytext);
+	SymbolInfo* s = new SymbolInfo(yytext, "PRINTLN");
+	s->setStartLine(line_count);
+	s->setEndLine(line_count);
+	yylval.symbolInfo = s;
+	return PRINTLN;	
+	}
 
 {INCOP} {
 	printLogLex("INCOP", yytext);

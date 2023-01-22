@@ -1,1 +1,0 @@
-Line# 7: Return type mismatch with the function declaration

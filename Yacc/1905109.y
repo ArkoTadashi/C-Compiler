@@ -171,7 +171,7 @@ unit : var_declaration {
 
 func_declaration : type_specifier ID LPAREN parameter_list RPAREN {
 				$2->setType("FUNCTION");
-				$2->setDataType($1->getType());
+				$2->setDataType($1->getDataType());
 				$2->setParameters(parameterList);
 				parameterList->clear();
 				$2->setInfoType(SymbolInfo::FUNCTION_DECLARATION);
@@ -189,7 +189,7 @@ func_declaration : type_specifier ID LPAREN parameter_list RPAREN {
 	}
 	| type_specifier ID LPAREN RPAREN {
 				$2->setType("FUNCTION");
-				$2->setDataType($1->getType());
+				$2->setDataType($1->getDataType());
 				$2->setInfoType(SymbolInfo::FUNCTION_DECLARATION);
 			} SEMICOLON {
 		printLog("func_declaration : type_specifier ID LPAREN RPAREN SEMICOLON");
@@ -208,6 +208,9 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN {
 					printErr("Redefinition of Function");
 				}
 				else if ($2->getInfoType() == SymbolInfo::FUNCTION_DECLARATION) {
+					if ($2->getDataType() != $1->getDataType()) {
+						printErr("Return type mismatch with the function declaration");
+					}
 					vector<SymbolInfo*>* params = $2->getParameters();
 					if (params->size() < parameterList->size()) {
 						printErr("Too many arguments to function '" + $2->getName() + "'");
@@ -230,11 +233,6 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN {
 							}
 						} 
 					}
-				}
-				else if ($2->getDataType() != $1->getType()) {
-					cout << $2->getDataType() << endl;
-					cout << $1->getDataType() << endl;
-					printErr("Return type mismatch with the function declaration");
 				}
 				else {
 					$2->setType("FUNCTION");
@@ -260,8 +258,19 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN {
 				if ($2->getInfoType() == SymbolInfo::FUNCTION_DEFINITION) {
 					printErr("Redefinition of Function");
 				}
-				else if ($2->getDataType() != $1->getType()) {
-					printErr("Return type mismatch with the function declaration");
+				else if ($2->getInfoType() == SymbolInfo::FUNCTION_DECLARATION) {
+					if ($2->getDataType() != $1->getDataType()) {
+						printErr("Return type mismatch with the function declaration");
+					}
+					vector<SymbolInfo*>* params = $2->getParameters();
+					if (params->size()) {
+						printErr("Too few arguments to function '" + $2->getName() + "'");
+					}
+					else {
+						$2->setType("FUNCTION");
+						$2->setDataType($1->getType());
+						$2->setInfoType(SymbolInfo::FUNCTION_DEFINITION);
+					}
 				}
 				else {
 					$2->setType("FUNCTION");
@@ -290,6 +299,7 @@ parameter_list : parameter_list COMMA type_specifier ID {
 		$$->addChild($3);
 		$$->addChild($4);
         $$->setEndLine($4->getEndLine());
+		$4->setDataType($3->getDataType());
 		if ($3->getType() == "void") {
 			printErr("Function parameter cannot be void");
 		}
@@ -322,6 +332,7 @@ parameter_list : parameter_list COMMA type_specifier ID {
 		$$->addChild($1);
 		$$->addChild($2);
         $$->setEndLine($2->getEndLine());
+		$2->setDataType($1->getDataType());
 		if ($1->getType() == "void") {
 			printErr("Function parameter cannot be void");
 		}
@@ -940,6 +951,9 @@ int main(int argc,char *argv[]) {
 	yyparse();
 	
 	fclose(yyin);
+	logout.close();
+	parseout.close();
+	errout.close();
 	
 	return 0;
 }
