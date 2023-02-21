@@ -1,0 +1,16 @@
+int a, b;
+
+int main() {
+    a = 5;
+    printLn(a);
+
+    int x;
+    x = 5;
+
+    if (x == 6) {
+        x = 10;
+    }
+    else {
+        x = 20;
+    }
+}
