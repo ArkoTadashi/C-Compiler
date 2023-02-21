@@ -274,70 +274,70 @@ void generateCode(SymbolInfo* symbol) {
 		}
 	}
 
-	// //vari:id?
-	// //var:arr?
-	// //arr er jonno ofset er bodole arrsize diye use hobe
-	// else if(symbol->getName()=="variable : ID"){
-	// 	if(childList[0]->getOffset()==0){
-	// 		icgout << "\tMOV CX,"<<<<"\n",childList[0]->getName().c_str()); 
-	// 		//for factor =var // etate prob hoy // so->
-	// 	}
-	// 	else{
-	// 		icgout << "\tMOV CX,[BP-" <<<< "]\n",childList[0]->getOffset());
-	// 	}
+	//vari:id?
+	//var:arr?
+	//arr er jonno ofset er bodole arrsize diye use hobe
+	else if(symbol->getName() == "variable" and symbol->getType() == "ID"){
+		if(childList[0]->getOffset()==0){
+			icgout << "\tMOV CX,"<<childList[0]->getName()<<"\n"; 
+			//for factor =var // etate prob hoy // so->
+		}
+		else{
+			icgout << "\tMOV CX,[BP-" <<childList[0]->getOffset()<< "]\n";
+		}
 		
-	// 	//debug
-	// 	printf(""<<<<" offset:" <<<< "\n",childList[0]->getName().c_str(),childList[0]->getOffset());
+		//debug
+		//printf(""<<<<" offset:" <<<< "\n",childList[0]->getName().c_str(),childList[0]->getOffset());
 			
-	// }
+	}
 	// //else if(arrr){
 
 	// // }
 
-	// else if(symbol->getName()=="expression : variable ASSIGNOP logic_expression"){
+	else if(symbol->getName() == "expression" and symbol->getType() == "variable ASSIGNOP logic_expression"){
 		
-	// 	// assign expr e var er val push korte hoy
-	// 	//asgn e var alada vabe handle
-	// 	labl=newLabel();
-	// 	symbolInfo* varChild=childList[0]->getChild(0);
-	// 	icgout << ""<<<<":",labl.c_str());
-	// 	genarateAsmCode(childList[2]);
+		// assign expr e var er val push korte hoy
+		//asgn e var alada vabe handle
+		label=newLabel();
+		symbolInfo* varChild=childList[0]->getChild(0);
+		icgout << ""<<label<<":";
+		generateCode(childList[2]);
 
-	// 	if(varChild->isFun()!="array"){
-	// 		if(varChild->getOffset()==0)
-	// 			icgout << "\tMOV "<<<<",CX\n",varChild->getName().c_str());
-	// 		else
-	// 			icgout << "\tMOV [BP-" <<<< "],CX\n",varChild->getOffset());		
-	// 	}
+		if(varChild->getType()!="ARRAY"){
+			if(varChild->getOffset()==0)
+				icgout << "\tMOV "<<varChild->getChild()<<",CX\n";
+			else
+				icgout << "\tMOV [BP-" <<varChild->getOffset()<< "],CX\n";		
+		}
 
-	// 	else if(varChild->isFun()=="array"){ 
-	// 		//arr part a[3]=3...
-	// 		//prob
-	// 		// if(varChild->getOffset()==0)
-	// 		// 	icgout << "\tMOV "<<<<",CX\n\tPUSH CX\n",varChild->getName().c_str());
-	// 		// else
-	// 		// 	icgout << "\tMOV [BP-" <<<< "],CX\n\tPUSH CX\n",varChild->getOffset());		
-	// 	}
+		else if(varChild->getType()=="ARRAY"){ 
+			//arr part a[3]=3...
+			//prob
+			// if(varChild->getOffset()==0)
+			// 	icgout << "\tMOV "<<<<",CX\n\tPUSH CX\n",varChild->getName().c_str());
+			// else
+			// 	icgout << "\tMOV [BP-" <<<< "],CX\n\tPUSH CX\n",varChild->getOffset());		
+		}
 
-	// 	//debug
-	// 	printf(""<<<<" offset:" <<<< "\n",varChild->getName().c_str(),varChild->getOffset());
+		//debug
+		//printf(""<<<<" offset:" <<<< "\n",varChild->getName().c_str(),varChild->getOffset());
 			
-	// }
+	}
 
-	// else if(symbol->getName()=="logic_expression : rel_expression LOGICOP rel_expression"){
-	// 	string label=newLabel();
-	// 	genarateAsmCode(childList[0]);
+	else if(symbol->getName()=="logic_expression" and symbol->getType()=="rel_expression LOGICOP rel_expression"){
+		string label=newLabel();
+		generateCode(childList[0]);
 
-	// 	if(childList[1]->getName()=="&&"){
-	// 		icgout << "\tCMP CX,0\n\tJCXZ "<<<<"\n",label.c_str());
-	// 	}
-	// 	else{
-	// 		icgout << "\tCMP CX,0\n\tJNZ "<<<<"\n",label.c_str());
-	// 	}
+		if(childList[1]->getName()=="&&"){
+			icgout << "\tCMP CX,0\n\tJCXZ "<<label<<"\n";
+		}
+		else{
+			icgout << "\tCMP CX,0\n\tJNZ "<<label<<"\n";
+		}
 
-	// 	genarateAsmCode(childList[2]);
-	// 	icgout << ""<<<<":\n",label.c_str());
-	// }
+		generateCode(childList[2]);
+		icgout << ""<<label<<":\n";
+	}
 
 	// else if(symbol->getName()=="rel_expression : simple_expression RELOP simple_expression"){
 	// 	string l1=newLabel();
