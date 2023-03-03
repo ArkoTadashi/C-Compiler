@@ -132,6 +132,9 @@ public:
     void addChild(SymbolInfo* child) {
         childList->push_back(child);
     }
+    SymbolInfo* getChild(int pos) {
+        return (*childList)[pos];
+    }
     vector<SymbolInfo*>* getChildList() {
         return childList;
     }

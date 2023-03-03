@@ -60,8 +60,9 @@ void deleteTree(SymbolInfo* parent) {
 int labelCount = 0;
 int tempCount = 0;
 int globalOffset = 0;
-bool localVar = false;
+bool locVar = false;
 string funcName;
+
 
 string newLabel() {
 	string label;
@@ -76,34 +77,12 @@ string newLabel() {
 	return label;
 }
 
-string newTemp() {
-	string temp;
-	char *t= new char[4];
-	strcpy(t,"T");
-	char b[3];
-	sprintf(b,"%d", tempCount);
-	tempCount++;
-	strcat(t,b);
-	temp=t;
-	return temp;
-}
-
 void asmInit(){
 	icgout << ".MODEL SMALL\n.STACK 1000H\n.Data\n";
     icgout << "\tCR EQU 0DH\n\tLF EQU 0AH\n\tnumber DB \"00000$\"\n";
 	for(int i = 0; i < globalList->size(); i++) {
         icgout << "\t" << (*globalList)[i]->getName() << " DW 1 DUP (0000H)\n";
     }
-
-	// fclose(asmout);	//prob
-	// asmout=fopen("1905108_asm.asm","r");
-	// char ch='0';
-	// while(ch!=EOF){
-	// 	ch=fgetc(asmout);
-	// 	icgout << "%c",ch);
-	// 	printf("%c",ch);
-	// }
-	// what happens in last char?
 
     icgout << ".CODE\n";
 }
@@ -124,14 +103,14 @@ void printLn() {
     icgout << "\tNEG AX\n\tJMP print\nprint_output ENDP\n";
 }
 
-void generateCode(SymbolInfo* symbol) {
+void asmCode(SymbolInfo* symbol) {
 	vector<SymbolInfo*> childList = *(symbol->getChildList());
 	string label;
 	
 	if(symbol->getName() == "start") {
 		asmInit();
 		for(int i = 0; i < childList.size(); i++) {
-			generateCode(childList[i]);
+			asmCode(childList[i]);
 		}		
 		newLine();
 		printLn();
@@ -149,10 +128,9 @@ void generateCode(SymbolInfo* symbol) {
 		icgout << "\tPUSH BP\n\tMOV BP,SP\n";
 
 		for(int i = 0; i < childList.size(); i++) {
-			generateCode(childList[i]);
+			asmCode(childList[i]);
 		}	
 
-		//some fix is to done
 		icgout << "\tPOP BP\n";
 
 		if(childList[1]->getName() == "main") {
@@ -169,15 +147,17 @@ void generateCode(SymbolInfo* symbol) {
 	else if(symbol->getName() == "compound_statement") {
 		globalOffset = 0;
 		for(int i = 0; i < childList.size(); i++) {
-			generateCode(childList[i]);
+			asmCode(childList[i]);
 		}
 		icgout << "\tADD SP, " << globalOffset << "\n";
 	}
 
 	else if(symbol->getName() == "declaration_list" and symbol->getType() == "declaration_list COMMA ID") {
-		generateCode(childList[0]);
-		if(localVar == true) {
+		asmCode(childList[0]);
+		// childList[2]->setOffset(0);
+		if(locVar == true) {
 			if(childList[2]->getType() != "ARRAY") {
+				childList[2]->setOffset(globalOffset+2);
 				globalOffset += 2;
 				icgout << "\tSUB SP, 2\n";
 			}
@@ -185,76 +165,73 @@ void generateCode(SymbolInfo* symbol) {
 	}
 
 	else if(symbol->getName() == "declaration_list") {
-		if(localVar == true) {
+		// childList[0]->setOffset(0);
+		if(locVar == true) {
 			if(childList[0]->getType() != "ARRAY"){
+				childList[0]->setOffset(globalOffset+2);
 				globalOffset+=2;
 				icgout << "\tSUB SP, 2\n";
 			}
 		}
-
-		//debug
-		//printf(""<<<<" offset:" <<<< "\n",childList[0]->getName().c_str(),childList[0]->getOffset());		
+	
 	}
 
 	else if(symbol->getName() == "statement" and symbol->getType() == "var declaration") {
-		localVar = true;
-		for(int i = 0; i < childList.size(); i++){
-			generateCode(childList[i]);
+		locVar = true;
+		for(auto i : childList){
+			asmCode(i);
 		}
-		localVar = false;
+		locVar = false;
 	}
 
 	else if(symbol->getName() == "statement" and symbol->getType() == "FOR LPAREN expression_statement expression_statement expression RPAREN statement") {
 		
-		//etar code???
-		string lstart = newLabel();
+		string childListart = newLabel();
 		string lEnd = newLabel();
-		generateCode(childList[2]);
-		icgout << lstart << ":\n";
-		generateCode(childList[3]);
+		asmCode(childList[2]);
+		icgout << childListart << ":\n";
+		asmCode(childList[3]);
 		
-		//2nd expr_stmt true hole stmt or end
 		icgout << "\tJCXZ " << lEnd << "\n";
-		generateCode(childList[6]);
-		generateCode(childList[4]);
-		icgout << "\tJMP " << lstart << "\n";
-		icgout << lEnd << " : \n";
+		asmCode(childList[6]);
+		asmCode(childList[4]);
+		icgout << "\tJMP " << childListart << "\n";
+		icgout << lEnd << "" and symbol->getType() == "\n";
 
 	}
 
-	//IF ELSE, WHILE...
 
 	else if(symbol->getName()=="statement" and symbol->getType() == "IF LPAREN expression RPAREN statement ELSE statement"){
 		icgout << ";S:if(B)S1 else S2 -- line " << childList[0]->getStartLine() << "\n" << newLabel() << ":\n";
 		string lt=newLabel();
 		string lf=newLabel();
-		generateCode(childList[2]);
+		asmCode(childList[2]);
 		icgout << "\tJCXZ " << lf << "\n\n";
-		generateCode(childList[4]);	//true stmt
+		asmCode(childList[4]);	
 		icgout << "\tJMP " << lt << "\n" << lf << ":\n";
-		generateCode(childList[6]); 	//false stmt
+		asmCode(childList[6]); 
 		icgout << "" << lt << ":\n";
 	}
 
 	else if(symbol->getName() == "statement" and symbol->getType() == "IF LPAREN expression RPAREN statement") {
 		icgout << ";S:if(B)S1 -- line " << childList[0]->getStartLine() << "\n" << newLabel() << ":\n";
 		string lf = newLabel();
-		generateCode(childList[2]);
+		asmCode(childList[2]);
 		icgout << "\tJCXZ " << lf << "\n";
-		generateCode(childList[4]);
+		asmCode(childList[4]);
 		icgout << lf << ":\n";
 	}
 
 	
 
 	else if(symbol->getName()=="statement" and symbol->getType() == "WHILE LPAREN expression RPAREN statement"){
-		string lstart = newLabel();
+		string childListart = newLabel();
 		string lf=newLabel();
-		icgout << ";S:while(B)S1 -- line " << childList[0]->getStartLine() << "\n" << lstart <<":\n";
-		generateCode(childList[2]);
+		icgout << ";S:while(B)S1 -- line " << childList[0]->getStartLine() << "\n" << childListart <<":\n";
+		asmCode(childList[2]);
 		icgout << "\tJCXZ "<<lf<<"\n\n";
-		generateCode(childList[4]);	//true stmt
-		icgout << "\tJMP "<<lstart<<"\n"<<lf<<":\n";
+		asmCode(childList[4]);	
+		icgout << "\tJMP "<<childListart<<"\n"<<lf<<":\n";
  	 }
 
 	else if(symbol->getName()=="statement" and symbol->getType() == "PRINTLN LPAREN ID RPAREN SEMICOLON"){
@@ -269,64 +246,54 @@ void generateCode(SymbolInfo* symbol) {
 	else if(symbol->getName()=="statement" and symbol->getType() == "RETURN expression SEMICOLON"){
 		if(funcName!="main"){
 			icgout << "\t;line " <<childList[0]->getStartLine()<< ": return stmt\n";
-			generateCode(childList[1]);
+			asmCode(childList[1]);
 			icgout << "\tMOV DX,CX\n";
 		}
 	}
 
-	//vari:id?
-	//var:arr?
-	//arr er jonno ofset er bodole arrsize diye use hobe
 	else if(symbol->getName() == "variable" and symbol->getType() == "ID"){
 		if(childList[0]->getOffset()==0){
 			icgout << "\tMOV CX,"<<childList[0]->getName()<<"\n"; 
-			//for factor =var // etate prob hoy // so->
 		}
 		else{
 			icgout << "\tMOV CX,[BP-" <<childList[0]->getOffset()<< "]\n";
 		}
-		
-		//debug
-		//printf(""<<<<" offset:" <<<< "\n",childList[0]->getName().c_str(),childList[0]->getOffset());
 			
 	}
-	// //else if(arrr){
-
-	// // }
 
 	else if(symbol->getName() == "expression" and symbol->getType() == "variable ASSIGNOP logic_expression"){
-		
-		// assign expr e var er val push korte hoy
-		//asgn e var alada vabe handle
 		label=newLabel();
-		symbolInfo* varChild=childList[0]->getChild(0);
+		SymbolInfo* varChild=childList[0]->getChild(0);
 		icgout << ""<<label<<":";
-		generateCode(childList[2]);
+		asmCode(childList[2]);
 
 		if(varChild->getType()!="ARRAY"){
 			if(varChild->getOffset()==0)
-				icgout << "\tMOV "<<varChild->getChild()<<",CX\n";
+				icgout << "\tMOV "<<varChild->getName()<<",CX\n";
 			else
 				icgout << "\tMOV [BP-" <<varChild->getOffset()<< "],CX\n";		
 		}
 
-		else if(varChild->getType()=="ARRAY"){ 
-			//arr part a[3]=3...
-			//prob
-			// if(varChild->getOffset()==0)
-			// 	icgout << "\tMOV "<<<<",CX\n\tPUSH CX\n",varChild->getName().c_str());
-			// else
-			// 	icgout << "\tMOV [BP-" <<<< "],CX\n\tPUSH CX\n",varChild->getOffset());		
-		}
+		else if(varChild->getType()=="ARRAY") { 
+			cout << varChild->getOffset() << endl;
+			if(varChild->getOffset()==0){
+				icgout << "\tPUSH CX\n";
+				asmCode(childList[0]);
+				icgout << "\tPOP CX\n\tMOV [SI] , CX\n";
+			}
+			else{
+				icgout << "\t;arr=val\n\tPUSH CX\n";
+				asmCode(childList[0]);
+				icgout << "\tPOP CX\n\tMOV [BX] , CX\n";
+			}
 
-		//debug
-		//printf(""<<<<" offset:" <<<< "\n",varChild->getName().c_str(),varChild->getOffset());
 			
+		}
 	}
 
 	else if(symbol->getName()=="logic_expression" and symbol->getType()=="rel_expression LOGICOP rel_expression"){
 		string label=newLabel();
-		generateCode(childList[0]);
+		asmCode(childList[0]);
 
 		if(childList[1]->getName()=="&&"){
 			icgout << "\tCMP CX,0\n\tJCXZ "<<label<<"\n";
@@ -335,163 +302,169 @@ void generateCode(SymbolInfo* symbol) {
 			icgout << "\tCMP CX,0\n\tJNZ "<<label<<"\n";
 		}
 
-		generateCode(childList[2]);
+		asmCode(childList[2]);
 		icgout << ""<<label<<":\n";
 	}
 
-	// else if(symbol->getName()=="rel_expression : simple_expression RELOP simple_expression"){
-	// 	string l1=newLabel();
-	// 	string l2=newLabel();
+	else if(symbol->getName() == "rel_expression" and symbol->getType() == "simple_expression RELOP simple_expression"){
+		string l1 = newLabel();
+		string l2 = newLabel();
 
-	// 	genarateAsmCode(childList[0]);
-	// 	icgout << "\tMOV AX,CX\n");
-	// 	genarateAsmCode(childList[2]);
-	// 	icgout << "\tCMP AX,CX\n");
+		asmCode(childList[0]);
+		icgout << "\tMOV AX,CX\n";
+		asmCode(childList[2]);
+		icgout << "\tCMP AX,CX\n";
 
-	// 	if(childList[1]->getName()=="<"){
-	// 		icgout << "\tJL "<<<<"\n",l1.c_str());
-	// 	}
-	// 	else if(childList[1]->getName()=="<="){
-	// 		icgout << "\tJLE "<<<<"\n",l1.c_str());
-	// 	}
-	// 	else if(childList[1]->getName()==">"){
-	// 		icgout << "\tJG "<<<<"\n",l1.c_str());
-	// 	}
-	// 	else if(childList[1]->getName()==">="){
-	// 		icgout << "\tJGE "<<<<"\n",l1.c_str());
-	// 	}
-	// 	else if(childList[1]->getName()=="=="){
-	// 		icgout << "\tJE "<<<<"\n",l1.c_str());
-	// 	}
-	// 	else if(childList[1]->getName()=="!="){
-	// 		icgout << "\tJNE "<<<<"\n",l1.c_str());
-	// 	}
+		if(childList[1]->getName() == "<"){
+			icgout << "\tJL " << l1 << "\n";
+		}
+		else if(childList[1]->getName()=="<="){
+			icgout << "\tJLE " << l1 << "\n";
+		}
+		else if(childList[1]->getName()==">"){
+			icgout << "\tJG " << l1 << "\n";
+		}
+		else if(childList[1]->getName()==">="){
+			icgout << "\tJGE " << l1 << "\n";
+		}
+		else if(childList[1]->getName()=="=="){
+			icgout << "\tJE " << l1 << "\n";
+		}
+		else if(childList[1]->getName()=="!="){
+			icgout << "\tJNE " << l1 << "\n";
+		}
 
-	// 	icgout << "\tMOV CX,0\n\tJMP "<<<<"\n"<<<<":\n\tMOV CX,1\n"<<<<":",l2.c_str(),l1.c_str(),l2.c_str());
-	// }
+		icgout << "\tMOV CX,0\n\tJMP " << l2 << "\n" << l1 << ":\n\tMOV CX,1\n" << l2 << ":";
+	}
 
-	// else if(symbol->getName()=="simple_expression : simple_expression ADDOP term"){
-	// 	genarateAsmCode(childList[0]);
-	// 	icgout << "\tPUSH CX\n");
-	// 	genarateAsmCode(childList[2]);
+	else if(symbol->getName()=="simple_expression" and symbol->getType() == "simple_expression ADDOP term"){
+		asmCode(childList[0]);
+		icgout << "\tPUSH CX\n";
+		asmCode(childList[2]);
 		
-	// 	if(childList[1]->getName()=="+"){
-	// 		icgout << "\tPOP AX\n\tADD CX,AX\n");	
-	// 	}
-	// 	else{
-	// 		icgout << "\tPOP AX\n\tSUB AX,CX\n\tMOV CX,AX\n"); //or mov ax,cx; pop cx; sub cx,ax
-	// 	}
-	// }
+		if(childList[1]->getName()=="+"){
+			icgout << "\tPOP AX\n\tADD CX,AX\n";	
+		}
+		else{
+			icgout << "\tPOP AX\n\tSUB AX,CX\n\tMOV CX,AX\n";
+		}
+	}
 
-	// else if(symbol->getName()=="term : term MULOP unary_expression"){
-	// 	genarateAsmCode(childList[0]);
-	// 	icgout << "\tPUSH CX\n");
-	// 	genarateAsmCode(childList[2]);
+	else if(symbol->getName()=="term" and symbol->getType() == "term MULOP unary_expression"){
+		asmCode(childList[0]);
+		icgout << "\tPUSH CX\n";
+		asmCode(childList[2]);
 		
-	// 	if(childList[1]->getName()=="*"){
-	// 		icgout << "\tPOP AX\n\tIMUL CX\n\tMOV CX,AX\n");
-	// 	}
-	// 	else if(childList[1]->getName()=="/"){
-	// 		icgout << "\tPOP AX\n\tCWD\n\tIDIV CX\n\tMOV CX,AX\n");
-	// 	}
-	// 	else if(childList[1]->getName()=="%"){
-	// 		icgout << "\tPOP AX\n\tCWD\n\tIDIV CX\n\tMOV CX,DX\n");
-	// 	}
+		if(childList[1]->getName()=="*"){
+			icgout << "\tPOP AX\n\tIMUL CX\n\tMOV CX,AX\n";
+		}
+		else if(childList[1]->getName()=="/"){
+			icgout << "\tPOP AX\n\tCWD\n\tIDIV CX\n\tMOV CX,AX\n";
+		}
+		else if(childList[1]->getName()=="%"){
+			icgout << "\tPOP AX\n\tCWD\n\tIDIV CX\n\tMOV CX,DX\n";
+		}
 	
-	// }
+	}
 	
 	
-	// else if(symbol->getName()=="unary_expression : ADDOP unary_expression"){
-	// 	genarateAsmCode(childList[1]);
-	// 	if(childList[0]->getName()=="-"){
-	// 		icgout << "\tNEG CX\n"); 
-	// 	}
-	// }
+	else if(symbol->getName()=="unary_expression" and symbol->getType() == "ADDOP unary_expression"){
+		asmCode(childList[1]);
+		if(childList[0]->getName()=="-"){
+			icgout << "\tNEG CX\n"; 
+		}
+	}
 
-	// //bool or val?
-	// else if(symbol->getName()=="unary_expression : NOT unary_expression"){
-	// 	string lz=newLabel();
-	// 	string lo=newLabel();
-	// 	genarateAsmCode(childList[1]);
-	// 	icgout << "\tJCXZ "<<<<"\n\tMOV CX,0\n\tJMP "<<<<"\n"<<<<":\n\tMOV CX,1\n"<<<<":\n",lo.c_str(),lz.c_str(),lo.c_str(),lz.c_str());
+	else if(symbol->getName()=="unary_expression" and symbol->getType() == "NOT unary_expression"){
+		string l1=newLabel();
+		string l2=newLabel();
+		asmCode(childList[1]);
+		icgout << "\tJCXZ " << l2 << "\n\tMOV CX,0\n\tJMP " << l1 << "\n" << l2 << ":\n\tMOV CX,1\n" << l1 << ":\n";
 
-	// }
+	}
 
-	// else if(symbol->getName()=="factor : ID LPAREN argument_list RPAREN"){
-	// 	genarateAsmCode(childList[2]);
-	// 	icgout << "\tCALL "<<<<"\n\tMOV CX,DX\n\tADD SP," <<<< "\n", childList[0]->getName().c_str(),childList[2]->getOffset());
-	// 	//func er arglist er offset fix korte hobe: how?
-	// 	//inside or outside?
-	// }
-
-	// else if(symbol->getName()=="factor : CONST_INT"){
-	// 	icgout << "\tMOV CX, "<<<<"\n", childList[0]->getName().c_str());
-	// }
-
-	// else if(symbol->getName()=="factor : CONST_FLOAT"){
-	// 	icgout << "\tMOV CX, "<<<<"\n", childList[0]->getName().c_str());
-	// }
-
-	// else if(symbol->getName()=="factor : variable INCOP"){
-	// 	labl=newLabel();
-	// 	icgout << ""<<<<":\n",labl.c_str());
+	else if(symbol->getName()=="factor" and symbol->getType() == "ID LPAREN argument_list RPAREN"){
+		asmCode(childList[2]);
+		icgout << "\tCALL " << childList[0]->getName() << "\n\tMOV CX,DX\n\tADD SP," << childList[2]->getOffset() << "\n";
 		
-	// 	//local global handle korte hobe
-		
-	// 	//id part
-	// 	if(childList[0]->getChild(0)->isFun()!="array"){
-	// 		if(childList[0]->getChild(0)->getOffset()==0){
-	// 			icgout << "\tMOV CX, "<<<<"\n", childList[0]->getChild(0)->getName().c_str());
-	// 			icgout << "\tMOV AX, CX\n\tINC AX\n\tMOV "<<<<",AX\n",childList[0]->getChild(0)->getName().c_str());
-	// 		}
-	// 		else{
-	// 			icgout << "\tMOV CX, [BP-" <<<< "]\n", childList[0]->getChild(0)->getOffset());
-	// 			icgout << "\tMOV AX, CX\n\tINC AX\n\tMOV [BP-" <<<< "],AX\n",childList[0]->getChild(0)->getOffset());
-	// 		}
-	// 	}
-		
-	// 	//arr part
-	// 	// else if(){
+	}
 
-	// 	// }
-	
-	// //debug
-	// printf(""<<<<" offset:" <<<< "\n",childList[0]->getChild(0)->getName().c_str(),childList[0]->getChild(0)->getOffset());
-	
-	// }
-	
-	// else if(symbol->getName()=="factor : variable DECOP"){
-	// 	labl=newLabel();
-	// 	icgout << ""<<<<":\n",labl.c_str());
+	else if(symbol->getName()=="factor" and symbol->getType() == "CONST_INT"){
+		icgout << "\tMOV CX, " << childList[0]->getName() << "\n";
+	}
+
+	else if(symbol->getName()=="factor" and symbol->getType() == "CONST_FLOAT"){
+		icgout << "\tMOV CX, " << childList[0]->getName() << "\n";
+	}
+
+	else if(symbol->getName()=="factor" and symbol->getType() == "variable INCOP"){
+		label=newLabel();
+		icgout << "" << label << ":\n";
 		
-	// 	if(childList[0]->getChild(0)->isFun()!="array"){
-	// 		if(childList[0]->getChild(0)->getOffset()==0){
-	// 			icgout << "\tMOV CX, "<<<<"\n", childList[0]->getChild(0)->getName().c_str());
-	// 			icgout << "\tMOV AX, CX\n\tDEC AX\n\tMOV "<<<<",AX\n",childList[0]->getChild(0)->getName().c_str());
-	// 		}
-	// 		else{
-	// 			icgout << "\tMOV CX, [BP-" <<<< "]\n", childList[0]->getChild(0)->getOffset());
-	// 			icgout << "\tMOV AX, CX\n\tDEC AX\n\tMOV [BP-" <<<< "],AX\n",childList[0]->getChild(0)->getOffset());
-	// 		}
-	// 	}
+		if(childList[0]->getChild(0)->getType()!="ARRAY"){
+			if(childList[0]->getChild(0)->getOffset()==0){
+				icgout << "\tMOV CX, " << childList[0]->getChild(0)->getName() << "\n";
+				icgout << "\tMOV AX, CX\n\tINC AX\n\tMOV " << childList[0]->getChild(0)->getName() << ",AX\n";
+			}
+			else{
+				icgout << "\tMOV CX, [BP-" << childList[0]->getChild(0)->getOffset() << "]\n";
+				icgout << "\tMOV AX, CX\n\tINC AX\n\tMOV [BP-" << childList[0]->getChild(0)->getOffset() << "],AX\n";
+			}
+		}
 		
-	// 	// else if(){}
-	// }
+		else{
+			if(childList[0]->getChild(0)->getOffset()==0){
+				asmCode(childList[0]);
+				icgout << "\tMOV AX , CX\n\tINC AX\n\tMOV [SI] , AX\n";
+			}
+			else{
+				asmCode(childList[0]);
+				icgout << "\tMOV AX , CX\n\tINC AX\n\tMOV [BX] , AX\n";
+			}
+		}
 	
-	// else if(symbol->getName()=="arguments : arguments COMMA logic_expression"){
-	// 	genarateAsmCode(childList[0]);
-	// 	genarateAsmCode(childList[2]);
-	// 	icgout << "\tPUSH CX\n");
-	// }
+	}
 	
-	// else if(symbol->getName()=="arguments : logic_expression"){
-	// 	genarateAsmCode(childList[0]);
-	// 	icgout << "\tPUSH CX\n");
-	// }
+	else if(symbol->getName()=="factor" and symbol->getType() == "variable DECOP"){
+		label=newLabel();
+		icgout << "" << label<< ":\n";
+		
+		if(childList[0]->getChild(0)->getType()!="ARRAY"){
+			if(childList[0]->getChild(0)->getOffset()==0){
+				icgout << "\tMOV CX, " << childList[0]->getChild(0)->getName() << "\n";
+				icgout << "\tMOV AX, CX\n\tDEC AX\n\tMOV " << childList[0]->getChild(0)->getName() << ",AX\n";
+			}
+			else{
+				icgout << "\tMOV CX, [BP-" << childList[0]->getChild(0)->getOffset()<< "]\n";
+				icgout << "\tMOV AX, CX\n\tDEC AX\n\tMOV [BP-" << childList[0]->getChild(0)->getOffset()<< "],AX\n";
+			}
+		}
+		
+		else{
+			if(childList[0]->getChild(0)->getOffset()==0){
+				asmCode(childList[0]);
+				icgout << "\tMOV AX , CX\n\tDEC AX\n\tMOV [SI] , AX\n";
+			}
+			else{
+				asmCode(childList[0]);
+				icgout << "\tMOV AX , CX\n\tDEC AX\n\tMOV [BX] , AX\n";
+			}
+		}
+	}
 	
+	else if(symbol->getName()=="arguments" and symbol->getType() == "arguments COMMA logic_expression"){
+		asmCode(childList[0]);
+		asmCode(childList[2]);
+		icgout << "\tPUSH CX\n";
+	}
+	
+	else if(symbol->getName()=="arguments" and symbol->getType() == "logic_expression"){
+		asmCode(childList[0]);
+		icgout << "\tPUSH CX\n";
+	}
 	else{
 		for(int i=0; i<childList.size(); i++){
-			generateCode(childList[i]);
+			asmCode(childList[i]);
 		}
 	}  	
 }
@@ -523,13 +496,10 @@ start : program {
 		$$->setStartLine($1->getStartLine());
         $$->setEndLine($1->getEndLine());
         $$->addChild($1);
-
-		if (err_count == 0) {
-			generateCode((SymbolInfo*)$$);
-		}
-
         $$->printChild(0, parseout);
         // deleteTree($$);
+
+		asmCode($$);
 		logout << "Total Lines: " << line_count << endl;
 		logout << "Total Errors: " << err_count << endl;
 	}
@@ -637,6 +607,7 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN {
 								$2->setParameters(parameterList);
 								$2->setInfoType(SymbolInfo::FUNCTION_DEFINITION);
 							}
+							(*params)[i]->setOffset(4+i*2);
 						} 
 					}
 				}
@@ -764,7 +735,7 @@ parameter_list : parameter_list COMMA type_specifier ID {
 	;
 
 compound_statement : LCURL {
-					table->newScope();  
+					table->newScope();  //////////////////////////////////////////////////////////////////////////////
 					for (SymbolInfo* symbol : *parameterList) {
 						bool inserted = table->insert(symbol->getName(), symbol->getType());
 						if(!inserted) {
@@ -786,7 +757,7 @@ compound_statement : LCURL {
 		table->closeScope();
 	}
 	| LCURL {
-				table->newScope(); 
+				table->newScope(); //////////////////////////////////////////////////////////////////////////////////////////////
 				for (SymbolInfo* symbol : *parameterList) {
 					bool inserted = table->insert(symbol->getName(), symbol->getType());
 					if(!inserted) {
@@ -822,12 +793,11 @@ var_declaration : type_specifier declaration_list SEMICOLON {
 				continue;
 			}
 		}
-		/////////
-		if (table->getNum() == 1) {
-			for (SymbolInfo* symbol: *declareList) {
+		// if (table->getNum() == 1) {
+			for (SymbolInfo* symbol : *declareList) {
 				globalList->push_back(symbol);
 			}
-		} 
+		// }
 		declareList->clear();
 		$$ = new SymbolInfo("var_declaration", "type_specifier declaration_list SEMICOLON");
 		$$->setStartLine($1->getStartLine());
@@ -835,6 +805,7 @@ var_declaration : type_specifier declaration_list SEMICOLON {
 		$$->addChild($2);
 		$$->addChild($3);
         $$->setEndLine($3->getEndLine());
+		
 	}
 	;
 
@@ -873,11 +844,23 @@ declaration_list : declaration_list COMMA ID {
         $$->setEndLine($2->getEndLine());
 		declareList->push_back($3);
 		$$->setDataType($1->getDataType());
+		if(table->getNum()==1){
+			$3->setOffset(0);
+			$$->setOffset(0);		
+		}
+		else {
+			$3->setOffset(2+$1->getOffset());
+			$$->setOffset(2+$1->getOffset());
+		}
 		
 	}
 	| declaration_list COMMA ID LTHIRD CONST_INT RTHIRD {
 		printLog("declaration_list : declaration_list COMMA ID LTHIRD CONST_INT RTHIRD");
 		$$ = new SymbolInfo("declaration_list", "declaration_list COMMA ID LTHIRD CONST_INT RTHIRD");
+		SymbolInfo* symbol = new SymbolInfo($3->getName(), "ARRAY");
+		symbol->setArraySize(stoi($5->getName()));
+		declareList->push_back(symbol);
+		$3 = (SymbolInfo*)symbol;
 		$$->setStartLine($1->getStartLine());
 		$$->addChild($1);
 		$$->addChild($2);
@@ -886,10 +869,15 @@ declaration_list : declaration_list COMMA ID {
 		$$->addChild($5);
 		$$->addChild($6);
         $$->setEndLine($6->getEndLine());
-		SymbolInfo* symbol = new SymbolInfo($3->getName(), "ARRAY");
-		symbol->setArraySize(stoi($5->getName()));
-		declareList->push_back(symbol);
 		$$->setDataType($1->getDataType());
+		if(table->getNum()==1){
+			$3->setOffset(0);
+			$$->setOffset(0);			
+		}
+		else {
+			$3->setOffset(2+$1->getOffset());
+			$$->setOffset(2+$1->getOffset());
+		}
 	}
 	| ID {
 		printLog("declaration_list : ID");
@@ -899,20 +887,39 @@ declaration_list : declaration_list COMMA ID {
         $$->setEndLine($1->getEndLine());
 		declareList->push_back($1);
 		$$->setDataType($1->getDataType());
+		if(table->getNum()==1){
+			$1->setOffset(0);	
+			$$->setOffset(0);		
+		}
+		else {
+			$1->setOffset(2);
+			$$->setOffset(2);
+		}
 	}
 	| ID LTHIRD CONST_INT RTHIRD {
 		printLog("declaration_list : ID LTHIRD CONST_INT RTHIRD");
 		$$ = new SymbolInfo("declaration_list", "ID LTHIRD CONST_INT RTHIRD");
+		SymbolInfo* symbol = new SymbolInfo($1->getName(), "ARRAY");
+		symbol->setArraySize(stoi($3->getName()));
+		declareList->push_back(symbol);
+		$1 = (SymbolInfo*)symbol;
 		$$->setStartLine($1->getStartLine());
 		$$->addChild($1);
 		$$->addChild($2);
 		$$->addChild($3);
 		$$->addChild($4);
         $$->setEndLine($4->getEndLine());
-		SymbolInfo* symbol = new SymbolInfo($1->getName(), "ARRAY");
-		symbol->setArraySize(stoi($3->getName()));
-		declareList->push_back(symbol);
+		
 		$$->setDataType($1->getDataType());
+
+		if(table->getNum()==1){
+			$1->setOffset(0);
+			$$->setOffset(0);			
+		}
+		else {
+			$1->setOffset(2);
+			$$->setOffset(2);
+		}
 	}
 	;
 	
@@ -1066,6 +1073,7 @@ variable : ID {
 		$$->addChild($1);
 		$$->setEndLine($1->getEndLine());
 		$$->setDataType($1->getDataType());
+		$$->setOffset($1->getOffset());
 	}
 	| ID LTHIRD expression RTHIRD {
 		printLog("variable : ID LTHIRD expression RTHIRD");
@@ -1090,6 +1098,7 @@ variable : ID {
 		$$->addChild($4);
 		$$->setEndLine($4->getEndLine());
 		$$->setDataType($1->getDataType());
+		$$->setOffset($1->getOffset());
 	}
 	;
 
@@ -1316,6 +1325,7 @@ argument_list : arguments {
 		$$->addChild($1);
         $$->setEndLine($1->getEndLine());
 		$$->setDataType($1->getDataType());
+		$$->setOffset($1->getOffset());
 	}
 	|
 	{
@@ -1333,6 +1343,7 @@ arguments : arguments COMMA logic_expression {
 		$$->addChild($3);
         $$->setEndLine($3->getEndLine());
 		$$->setDataType($1->getDataType());
+		$$->setOffset($1->getOffset()+2);
 	}
 	| logic_expression {
 		printLog("arguments : logic_expression");
@@ -1341,6 +1352,7 @@ arguments : arguments COMMA logic_expression {
 		$$->addChild($1);
         $$->setEndLine($1->getEndLine());
 		$$->setDataType($1->getDataType());
+		$$->setOffset(2);
 	}
 	;
 %%
